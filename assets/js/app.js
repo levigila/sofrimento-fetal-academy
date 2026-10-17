@@ -135,7 +135,8 @@
       ctgCorrect: 0,
       ctgTotal: 0,
       lastModule: null,
-      sound: { type: 'chuva', volume: 0.35, fx: true, wanted: false, tab: 'musica', lastTrack: null, autoNext: true }
+      sound: { type: 'chuva', volume: 0.35, fx: true, wanted: false, tab: 'musica', lastTrack: null, autoNext: true },
+      srs: { deck: 'glossario', cards: {}, days: {}, reviews: 0 }
     };
   }
 
@@ -148,7 +149,8 @@
       const parsed = JSON.parse(raw);
       if (!parsed || parsed.v !== STORE_VERSION) return defaultState();
       return Object.assign(defaultState(), parsed, {
-        sound: Object.assign(defaultState().sound, parsed.sound || {})
+        sound: Object.assign(defaultState().sound, parsed.sound || {}),
+        srs: Object.assign(defaultState().srs, parsed.srs || {})
       });
     } catch (e) {
       return defaultState();
@@ -417,12 +419,30 @@
     });
 
     html += '<div class="nav-label">Treino</div>';
+    html += navItem('revisao', '🔁', 'Revisão Espaçada', srsNavSub(), current);
     html += navItem('quiz', '🧪', 'Banco de Questões', allQuestionsAnswered() + ' questões', current);
     html += navItem('casos', '🩺', 'Casos Clínicos', CASES.length + ' casos', current);
     html += navItem('ctg', '📈', 'Simulador de CTG', 'treine o traçado ao vivo', current);
     html += navItem('selos', '🏆', 'Meus Selos', Object.keys(state.badges).length + '/' + BADGES.length + ' conquistados', current);
 
     nav.innerHTML = html;
+  }
+
+  // subtítulo do item de navegação: quantos cartões esperam revisão hoje
+  function srsNavSub() {
+    try {
+      const q = SRS.buildQueue(srsDeckId(), state.srs.cards);
+      return q.counts.total ? q.counts.total + ' para revisar hoje' : 'tudo em dia';
+    } catch (e) { return 'revisão espaçada'; }
+  }
+
+  function srsHomeSub() {
+    try {
+      const q = SRS.buildQueue(srsDeckId(), state.srs.cards);
+      return q.counts.total
+        ? q.counts.total + ' cartões esperando · estilo Anki'
+        : 'tudo em dia · estilo Anki';
+    } catch (e) { return 'estilo Anki'; }
   }
 
   function navItem(hash, icon, title, sub, current, done) {
@@ -929,6 +949,10 @@
     } else if (head === 'casos') {
       currentView = 'casos';
       content.innerHTML = renderCasesList();
+    } else if (head === 'revisao') {
+      currentView = 'revisao';
+      srsSession = null;
+      content.innerHTML = renderSRS();
     } else if (head === 'caso') {
       currentView = 'caso';
       content.innerHTML = renderCaseDetail(parts[1]);
@@ -961,6 +985,32 @@
     });
     wireSections(content);
     if (currentView === 'caso') wireCase(content);
+    if (currentView === 'revisao') wireSRS(content);
+  }
+
+  function wireSRS(root) {
+    (root || document).querySelectorAll('[data-srsdeck]').forEach(b => {
+      b.addEventListener('click', () => {
+        Sound.fx.click();
+        state.srs.deck = b.dataset.srsdeck;
+        saveState();
+        srsSession = null;
+        go('revisao');
+      });
+    });
+
+    const exp = document.getElementById('srsExport');
+    if (exp) exp.addEventListener('click', () => downloadAnkiDeck(srsDeckId()));
+
+    const rst = document.getElementById('srsReset');
+    if (rst) rst.addEventListener('click', () => {
+      if (confirm('Zerar o progresso de revisão deste baralho? Os cartões voltam a ser novos.')) {
+        resetSRSDeck(srsDeckId());
+      }
+    });
+
+    // o botão de iniciar é recriado a cada render da área do cartão
+    renderSRSStage();
   }
 
   function handleAction(el, action) {
@@ -1072,6 +1122,7 @@
     html +=
       '<div class="shortcut-grid">' +
         shortcut('🧪', 'Banco de Questões', allQuestionsAnswered() + ' questões comentadas · por módulo ou geral', 'quiz') +
+        shortcut('🔁', 'Revisão Espaçada', srsHomeSub(), 'revisao') +
         shortcut('📄', 'Questões de Prova', examQuestions().length + ' questões reais de concursos e residência, com a banca', 'quiz/prova') +
         shortcut('🩺', 'Casos Clínicos', CASES.length + ' casos reais com conduta comentada', 'casos') +
         shortcut('📈', 'Simulador de CTG', '10 traçados ao vivo + modo desafio com pontuação', 'ctg') +
@@ -1729,6 +1780,324 @@
 
     const shell = document.getElementById('quizShell');
     if (shell) attachViewHandlers(shell);
+  }
+
+  /* ==========================================================
+     9b. VIEW: REVISÃO ESPAÇADA (estilo Anki)
+     ========================================================== */
+  let srsSession = null;
+
+  function todayKey(now) {
+    const d = new Date(now || Date.now());
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  function srsDeckId() {
+    const id = state.srs.deck || 'glossario';
+    return SRS.deckById(id).id;
+  }
+
+  function renderSRS() {
+    const deckId = srsDeckId();
+    const deck = SRS.deckById(deckId);
+    const stats = SRS.deckStats(deckId, state.srs.cards);
+    const today = state.srs.days[todayKey()] || { reviews: 0, again: 0 };
+    const q = SRS.buildQueue(deckId, state.srs.cards);
+    const dueTotal = q.counts.total;
+
+    let html = '<div class="view srs-shell">';
+
+    html +=
+      '<header class="mod-header" style="--mc:#a78bfa">' +
+        '<div class="mod-head-row">' +
+          '<span class="mod-icon">🔁</span>' +
+          '<div>' +
+            '<h1 class="mod-title">Revisão Espaçada</h1>' +
+            '<p class="mod-sub">Repita na hora certa: o que você está a ponto de esquecer</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="mod-meta">' +
+          '<span class="chip">' + stats.total + ' cartões no baralho</span>' +
+          '<span class="chip xp">' + dueTotal + ' para revisar agora</span>' +
+          '<span class="chip done">' + today.reviews + ' revisados hoje</span>' +
+        '</div>' +
+      '</header>';
+
+    /* ---- escolha do baralho ---- */
+    html += '<div class="srs-decks">';
+    SRS.decks().forEach(d => {
+      const st = SRS.deckStats(d.id, state.srs.cards);
+      const on = d.id === deckId;
+      html += '<button class="srs-deck' + (on ? ' on' : '') + '" data-srsdeck="' + d.id + '">' +
+        '<span class="sd-ico">' + d.icon + '</span>' +
+        '<span class="sd-body">' +
+          '<span class="sd-name">' + esc(d.name) + '</span>' +
+          '<span class="sd-desc">' + esc(d.desc) + '</span>' +
+        '</span>' +
+        '<span class="sd-counts">' +
+          '<span class="sd-new" title="cartões novos">' + st.fresh + '</span>' +
+          '<span class="sd-due" title="vencidos para revisão">' + st.dueNow + '</span>' +
+        '</span>' +
+        '</button>';
+    });
+    html += '</div>';
+
+    /* ---- painel de números ---- */
+    html +=
+      '<div class="srs-stats">' +
+        srsStat('🆕', stats.fresh, 'novos') +
+        srsStat('📚', stats.learning, 'aprendendo') +
+        srsStat('✅', stats.matured, 'em revisão') +
+        srsStat('⏰', stats.dueNow, 'vencidos') +
+        srsStat('🔥', today.reviews, 'hoje') +
+      '</div>';
+
+    /* ---- área do cartão ---- */
+    html += '<div id="srsStage"></div>';
+
+    /* ---- rodapé: exportar / explicar ---- */
+    html +=
+      '<div class="srs-foot">' +
+        '<div class="srs-export">' +
+          '<div class="srs-export-h">📤 Levar este baralho para o Anki</div>' +
+          '<p class="srs-export-t">Baixe o arquivo e importe no Anki Desktop em ' +
+            '<b>Arquivo → Importar</b>. O baralho entra com as cartas já formatadas.</p>' +
+          '<button class="btn sm" id="srsExport">⬇ Baixar baralho (.txt)</button>' +
+          '<button class="btn sm ghost" id="srsReset">↺ Zerar progresso deste baralho</button>' +
+        '</div>' +
+        '<div class="srs-note">' +
+          '<b>Por que não tem login do AnkiWeb aqui?</b> ' +
+          'O Anki não oferece API pública de conta: a sincronização do AnkiWeb usa um protocolo ' +
+          'próprio, fechado, e só as bibliotecas do app desktop (Python/Rust) falam com ele. ' +
+          'Um site estático não consegue autenticar na sua conta. Por isso a revisão espaçada ' +
+          'roda aqui dentro — mesmo método SM-2 do Anki — e o baralho pode ser exportado para lá.' +
+        '</div>' +
+      '</div>';
+
+    html += '</div>';
+    return html;
+  }
+
+  function srsStat(icon, val, lbl) {
+    return '<div class="srs-stat"><span class="ss-v">' + icon + ' ' + val + '</span>' +
+      '<span class="ss-l">' + esc(lbl) + '</span></div>';
+  }
+
+  /* ---------------- sessão de estudo ---------------- */
+  function startSRS(deckId) {
+    const id = SRS.deckById(deckId || srsDeckId()).id;
+    state.srs.deck = id;
+    saveState();
+
+    const q = SRS.buildQueue(id, state.srs.cards);
+    srsSession = {
+      deck: id,
+      queue: q.queue.map(c => c.id),
+      byId: {},
+      index: 0,
+      revealed: false,
+      done: 0,
+      again: 0,
+      good: 0,
+      startedAt: Date.now()
+    };
+    SRS.deckById(id).cards.forEach(c => { srsSession.byId[c.id] = c; });
+
+    renderSRSStage();
+  }
+
+  function srsCurrentCard() {
+    if (!srsSession) return null;
+    const id = srsSession.queue[srsSession.index];
+    return id ? srsSession.byId[id] : null;
+  }
+
+  function renderSRSStage() {
+    const stage = document.getElementById('srsStage');
+    if (!stage) return;
+
+    if (!srsSession) {
+      const q = SRS.buildQueue(srsDeckId(), state.srs.cards);
+      const n = q.counts.total;
+      stage.innerHTML =
+        '<div class="srs-start">' +
+          (n
+            ? '<div class="srs-start-n">' + n + '</div>' +
+              '<div class="srs-start-t">' + (n === 1 ? 'cartão esperando' : 'cartões esperando') + ' por você</div>' +
+              '<button class="btn primary big" id="srsGo">▶ Começar revisão</button>'
+            : '<div class="srs-start-n">🎉</div>' +
+              '<div class="srs-start-t">Tudo em dia neste baralho</div>' +
+              '<p class="srs-start-sub">Volte mais tarde — os cartões reaparecem na hora certa. ' +
+                'Você também pode estudar um baralho novo.</p>' +
+              '<button class="btn" id="srsGo">▶ Estudar mesmo assim</button>') +
+        '</div>';
+      const go = document.getElementById('srsGo');
+      if (go) go.addEventListener('click', () => {
+        Sound.fx.click();
+        startSRS(srsDeckId());
+      });
+      return;
+    }
+
+    const card = srsCurrentCard();
+    if (!card) { renderSRSDone(); return; }
+
+    const st = state.srs.cards[card.id] || SRS.newCard();
+    const total = srsSession.queue.length;
+    const pos = srsSession.index + 1;
+    const pct = total ? Math.round((srsSession.index / total) * 100) : 0;
+
+    let body;
+    if (!srsSession.revealed) {
+      body =
+        '<div class="srs-card front">' +
+          '<div class="srs-card-tag">' + srsStateLabel(st) + '</div>' +
+          '<div class="srs-front-text">' + esc(card.front) + '</div>' +
+          (card.src ? '<div class="srs-card-src">🏛️ ' + esc(card.src) + '</div>' : '') +
+          '<button class="btn primary big srs-reveal" id="srsReveal">Mostrar resposta</button>' +
+        '</div>';
+    } else {
+      body =
+        '<div class="srs-card back">' +
+          '<div class="srs-card-tag">' + srsStateLabel(st) + '</div>' +
+          '<div class="srs-front-text small">' + esc(card.front) + '</div>' +
+          '<div class="srs-back-text">' + card.back + '</div>' +
+          (card.src ? '<div class="srs-card-src">🏛️ ' + esc(card.src) + '</div>' : '') +
+        '</div>' +
+        '<div class="srs-rate">' +
+          SRS.RATINGS.map(r =>
+            '<button class="srs-rate-btn ' + r.cls + '" data-rate="' + r.id + '">' +
+              '<span class="rb-label">' + r.label + '</span>' +
+              '<span class="rb-int">' + SRS.intervalLabel(st, r.id) + '</span>' +
+            '</button>'
+          ).join('') +
+        '</div>';
+    }
+
+    stage.innerHTML =
+      '<div class="srs-progress">' +
+        '<div class="srs-bar"><div style="width:' + pct + '%"></div></div>' +
+        '<span class="srs-count">' + pos + ' / ' + total + '</span>' +
+      '</div>' +
+      body;
+
+    const reveal = document.getElementById('srsReveal');
+    if (reveal) reveal.addEventListener('click', () => {
+      srsSession.revealed = true;
+      Sound.fx.click();
+      renderSRSStage();
+    });
+
+    stage.querySelectorAll('[data-rate]').forEach(b => {
+      b.addEventListener('click', () => rateSRSCard(parseInt(b.dataset.rate, 10)));
+    });
+  }
+
+  function srsStateLabel(st) {
+    if (!st || st.state === 'new') return 'novo';
+    if (st.state === 'learning') return 'aprendendo';
+    return 'revisão · ' + SRS.humanize(st.ivl * SRS.DAY) + ' de intervalo';
+  }
+
+  function rateSRSCard(rating) {
+    if (!srsSession) return;
+    const card = srsCurrentCard();
+    if (!card) return;
+
+    const before = state.srs.cards[card.id] || SRS.newCard();
+    const after = SRS.schedule(before, rating);
+    state.srs.cards[card.id] = after;
+
+    // estatísticas do dia
+    const k = todayKey();
+    if (!state.srs.days[k]) state.srs.days[k] = { reviews: 0, again: 0 };
+    state.srs.days[k].reviews += 1;
+    if (rating === 1) state.srs.days[k].again += 1;
+    state.srs.reviews = (state.srs.reviews || 0) + 1;
+
+    srsSession.done += 1;
+    if (rating === 1) srsSession.again += 1;
+    if (rating >= 3) srsSession.good += 1;
+
+    // cartão errado volta para o fim da fila desta sessão
+    if (rating === 1) srsSession.queue.push(card.id);
+
+    if (rating === 1) { Sound.fx.wrong(); }
+    else if (rating === 4) { Sound.fx.correct(); confetti(24); }
+    else { Sound.fx.click(); }
+
+    addXP(rating === 1 ? 2 : 4, { silent: true });
+    saveState();
+    renderStats();
+
+    srsSession.index += 1;
+    srsSession.revealed = false;
+    renderSRSStage();
+  }
+
+  function renderSRSDone() {
+    const stage = document.getElementById('srsStage');
+    if (!stage) return;
+    const s = srsSession || { done: 0, again: 0, good: 0, startedAt: Date.now() };
+    const mins = Math.max(1, Math.round((Date.now() - s.startedAt) / 60000));
+    const acc = s.done ? Math.round((s.good / s.done) * 100) : 0;
+
+    stage.innerHTML =
+      '<div class="srs-done">' +
+        '<div class="srs-done-emoji">🏁</div>' +
+        '<div class="srs-done-title">Revisão concluída!</div>' +
+        '<div class="srs-done-stats">' +
+          '<div class="rs"><div class="rs-v">' + s.done + '</div><div class="rs-l">cartões</div></div>' +
+          '<div class="rs"><div class="rs-v">' + acc + '%</div><div class="rs-l">lembrados</div></div>' +
+          '<div class="rs"><div class="rs-v">' + mins + ' min</div><div class="rs-l">de estudo</div></div>' +
+        '</div>' +
+        '<div class="srs-done-actions">' +
+          '<button class="btn primary" id="srsAgain">↻ Revisar de novo</button>' +
+          '<button class="btn" data-nav="revisao">📊 Ver o painel</button>' +
+          '<button class="btn ghost" data-nav="quiz">🧪 Banco de questões</button>' +
+        '</div>' +
+      '</div>';
+
+    confetti(90);
+    Sound.fx.complete();
+
+    const again = document.getElementById('srsAgain');
+    if (again) again.addEventListener('click', () => { startSRS(srsSession ? srsSession.deck : srsDeckId()); });
+
+    const shell = document.getElementById('srsStage');
+    if (shell) attachViewHandlers(shell);
+
+    srsSession = null;
+  }
+
+  /* ---------------- exportação ---------------- */
+  function downloadAnkiDeck(deckId) {
+    const deck = SRS.deckById(deckId || srsDeckId());
+    const text = SRS.toAnkiText(deck.id);
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sofrimento-fetal-' + deck.id + '.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    toast('ok', '📤', 'Baralho baixado', deck.cards.length + ' cartões prontos para importar no Anki');
+  }
+
+  function resetSRSDeck(deckId) {
+    const deck = SRS.deckById(deckId || srsDeckId());
+    let n = 0;
+    deck.cards.forEach(c => {
+      if (state.srs.cards[c.id]) { delete state.srs.cards[c.id]; n++; }
+    });
+    saveState();
+    srsSession = null;
+    toast('info', '↺', 'Progresso zerado', n + ' cartões voltaram a ser novos');
+    renderStats();
+    go('revisao');
   }
 
   /* ==========================================================

@@ -18,6 +18,7 @@ Site 100% estático (HTML + CSS + JavaScript puro, **sem build e sem dependênci
 | **23 questões de provas reais** | Concursos, títulos de especialista e residência, com banca/órgão/ano e filtro próprio |
 | **5 casos clínicos** | Decisões reais de plantão com conduta comentada |
 | **20 flashcards** | Glossário com virada de carta em 3D |
+| **Revisão espaçada (estilo Anki)** | Motor SM-2 próprio: 84 cartões, 4 notas, fila diária e exportação para o Anki |
 | **Gamificação completa** | XP, 8 níveis de carreira, 12 selos, sequência de acertos |
 | **Som ambiente** | 6 paisagens sonoras sintetizadas ao vivo (Web Audio API) |
 | **Música do YouTube** | Player oficial com fila que emenda sozinha a próxima faixa |
@@ -95,6 +96,25 @@ Para treinar só com elas: **Início → Questões de Prova** (ou `#quiz/prova`)
 
 ---
 
+## 🔁 Revisão espaçada
+
+A aba **Revisão Espaçada** (`#revisao`) repete cada cartão no momento em que você está
+prestes a esquecê-lo, com o mesmo método **SM-2** que o Anki usa:
+
+- **3 baralhos**: Glossário (20), Questões (64) e Tudo (84)
+- **4 notas**: Errei · Difícil · Bom · Fácil, cada uma mostrando o intervalo que será aplicado
+- Fila diária na ordem do Anki: aprendizado atrasado → revisão vencida → novos (teto de 20/dia)
+- Progresso salvo no `localStorage`, estatísticas do dia e contagem no menu lateral
+- **Exportação para o Anki**: baixa um `.txt` com cabeçalho `#separator:tab` / `#html:true`
+  que o Anki Desktop importa em **Arquivo → Importar**
+
+> **Por que não tem login do AnkiWeb aqui?** O Anki não expõe API pública de conta: a
+> sincronização do AnkiWeb usa um protocolo próprio e fechado, falado apenas pelas bibliotecas
+> do app desktop (Python/Rust). Um site estático não consegue autenticar na sua conta — então a
+> revisão roda aqui dentro e o baralho pode ser levado para o Anki por exportação.
+
+---
+
 ## 📁 Estrutura
 
 ```
@@ -107,6 +127,7 @@ Para treinar só com elas: **Início → Questões de Prova** (ou `#quiz/prova`)
 │       ├── illustrations.js# 8 ilustrações SVG animadas
 │       ├── audio.js        # motor de som ambiente (Web Audio API)
 │       ├── ctg.js          # gerador e renderizador de traçados de CTG
+│       ├── srs.js          # motor de revisão espaçada (SM-2) e exportação p/ Anki
 │       └── app.js          # roteador, gamificação e renderização
 └── .nojekyll               # garante que o Pages sirva os assets
 ```

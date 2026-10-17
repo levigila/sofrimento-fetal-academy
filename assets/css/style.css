@@ -860,8 +860,12 @@ table.tbl td:first-child { color: var(--text); font-weight: 600; }
 .fc {
   perspective: 1200px; height: 172px; cursor: pointer;
   background: transparent; border: 0; padding: 0;
+  position: relative;
 }
 .fc-inner {
+  /* precisa ser bloco: como <span> inline, width/height em % eram ignorados
+     e o elemento colapsava para 0×0, sumindo com as duas faces da carta */
+  display: block;
   position: relative; width: 100%; height: 100%;
   transform-style: preserve-3d;
   transition: transform .58s var(--ease);
@@ -1178,6 +1182,134 @@ table.tbl td:first-child { color: var(--text); font-weight: 600; }
 .case-q { font-size: 17.5px; font-weight: 700; margin-bottom: 15px; color: #fff; }
 
 /* ============================================================
+   REVISÃO ESPAÇADA (estilo Anki)
+   ============================================================ */
+.srs-shell { max-width: 900px; }
+
+/* ---- escolha do baralho ---- */
+.srs-decks { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 11px; margin-bottom: 18px; }
+.srs-deck {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+  padding: 14px 16px; border-radius: var(--r); cursor: pointer; text-align: left;
+  background: rgba(148,163,184,.07); border: 1px solid var(--line);
+  transition: transform .16s var(--ease), border-color .16s, background .16s;
+}
+.srs-deck:hover { transform: translateY(-2px); border-color: var(--line-2); }
+.srs-deck.on {
+  background: rgba(167,139,250,.14);
+  border-color: rgba(167,139,250,.55);
+}
+.sd-ico { font-size: 20px; }
+.sd-name { display: block; font-size: 14px; font-weight: 700; color: var(--text); }
+.sd-desc { display: block; font-size: 11.5px; color: var(--muted); line-height: 1.35; margin-top: 2px; }
+.sd-counts { display: flex; gap: 5px; }
+.sd-counts span {
+  min-width: 26px; padding: 3px 7px; border-radius: 8px; text-align: center;
+  font-family: var(--f-mono); font-size: 11.5px; font-weight: 700;
+}
+.sd-new { background: rgba(56,189,248,.16); color: var(--sky); }
+.sd-due { background: rgba(245,158,11,.16); color: var(--amber); }
+
+/* ---- painel de números ---- */
+.srs-stats { display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 20px; }
+.srs-stat {
+  flex: 1; min-width: 104px;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 11px 14px; border-radius: var(--r-sm);
+  background: rgba(148,163,184,.08); border: 1px solid var(--line);
+}
+.ss-v { font-family: var(--f-mono); font-size: 16px; font-weight: 700; color: #fff; }
+.ss-l { font-size: 10.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); }
+
+/* ---- início ---- */
+.srs-start {
+  padding: 44px 26px; border-radius: var(--r-xl); text-align: center;
+  background: linear-gradient(140deg, rgba(167,139,250,.12), rgba(56,189,248,.07));
+  border: 1px solid rgba(167,139,250,.3);
+}
+.srs-start-n { font-family: var(--f-mono); font-size: 46px; font-weight: 800; color: #fff; line-height: 1; }
+.srs-start-t { font-size: 15px; color: var(--text-2); margin: 10px 0 20px; font-weight: 600; }
+.srs-start-sub { font-size: 13.5px; color: var(--muted); max-width: 420px; margin: 0 auto 20px; line-height: 1.55; }
+
+/* ---- barra de progresso da sessão ---- */
+.srs-progress { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.srs-bar { flex: 1; height: 7px; border-radius: 99px; background: rgba(148,163,184,.16); overflow: hidden; }
+.srs-bar > div { height: 100%; background: linear-gradient(90deg, var(--violet), var(--sky)); transition: width .35s var(--ease); }
+.srs-count { font-family: var(--f-mono); font-size: 12.5px; color: var(--muted); }
+
+/* ---- cartão ---- */
+.srs-card {
+  position: relative;
+  padding: 34px 30px; border-radius: var(--r-xl); min-height: 230px;
+  display: flex; flex-direction: column; justify-content: center;
+  background: var(--panel); border: 1px solid var(--line-2);
+  box-shadow: var(--sh-2);
+}
+.srs-card.front { background: linear-gradient(150deg, rgba(56,189,248,.1), var(--panel)); }
+.srs-card.back { background: linear-gradient(150deg, rgba(52,211,153,.1), var(--panel)); }
+.srs-card-tag {
+  position: absolute; top: 14px; left: 20px;
+  font-size: 10px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--faint);
+}
+.srs-front-text { font-size: 21px; font-weight: 700; line-height: 1.4; color: #fff; text-align: center; }
+.srs-front-text.small {
+  font-size: 14px; font-weight: 600; color: var(--muted);
+  text-align: left; padding-bottom: 14px; margin-bottom: 16px;
+  border-bottom: 1px dashed var(--line-2);
+}
+.srs-back-text { font-size: 16px; line-height: 1.6; color: var(--text); }
+.srs-back-text b { color: #fff; }
+.srs-card-src {
+  margin-top: 16px; font-size: 11.5px; font-weight: 700; color: var(--amber);
+}
+.srs-reveal { align-self: center; margin-top: 26px; }
+
+/* ---- botões de avaliação ---- */
+.srs-rate { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; margin-top: 14px; }
+.srs-rate-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 13px 8px; border-radius: var(--r); cursor: pointer;
+  background: rgba(11,18,32,.6); border: 1px solid var(--line-2);
+  transition: transform .16s var(--ease), border-color .16s, background .16s;
+}
+.srs-rate-btn:hover { transform: translateY(-2px); }
+.rb-label { font-size: 13.5px; font-weight: 700; color: var(--text); }
+.rb-int { font-family: var(--f-mono); font-size: 11px; color: var(--muted); }
+.srs-rate-btn.again:hover { border-color: var(--red); background: rgba(239,68,68,.14); }
+.srs-rate-btn.hard:hover  { border-color: var(--amber); background: rgba(245,158,11,.14); }
+.srs-rate-btn.good:hover  { border-color: var(--green); background: rgba(52,211,153,.14); }
+.srs-rate-btn.easy:hover  { border-color: var(--sky); background: rgba(56,189,248,.14); }
+
+/* ---- conclusão ---- */
+.srs-done { padding: 40px 26px; border-radius: var(--r-xl); text-align: center;
+  background: linear-gradient(140deg, rgba(52,211,153,.12), rgba(167,139,250,.08));
+  border: 1px solid rgba(52,211,153,.32); }
+.srs-done-emoji { font-size: 44px; }
+.srs-done-title { font-size: 22px; font-weight: 800; color: #fff; margin: 8px 0 20px; }
+.srs-done-stats { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 22px; }
+.srs-done-stats .rs { min-width: 100px; padding: 12px 16px; border-radius: var(--r-sm);
+  background: rgba(11,18,32,.55); border: 1px solid var(--line-2); }
+.srs-done-actions { display: flex; flex-wrap: wrap; gap: 9px; justify-content: center; }
+
+/* ---- rodapé: exportar + explicação ---- */
+.srs-foot { margin-top: 26px; display: flex; flex-direction: column; gap: 13px; }
+.srs-export {
+  padding: 18px 20px; border-radius: var(--r-lg);
+  background: rgba(148,163,184,.06); border: 1px solid var(--line);
+}
+.srs-export-h { font-size: 14.5px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.srs-export-t { font-size: 13px; color: var(--muted); line-height: 1.55; margin-bottom: 13px; }
+.srs-export .btn { margin-right: 8px; }
+.srs-note {
+  padding: 15px 18px; border-radius: var(--r);
+  background: rgba(56,189,248,.06); border: 1px solid rgba(56,189,248,.22);
+  border-left: 3px solid var(--sky);
+  font-size: 12.8px; color: var(--text-2); line-height: 1.6;
+}
+.srs-note b { color: #fff; }
+
+/* ============================================================
    SELOS
    ============================================================ */
 .badges-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(212px, 1fr)); gap: 14px; }
@@ -1433,6 +1565,10 @@ table.tbl td:first-child { color: var(--text); font-weight: 600; }
   .result-card { padding: 24px 18px; }
   .ctg-metrics { gap: 7px; }
   .ctg-metric { min-width: 80px; padding: 8px 11px; }
+  .srs-rate { grid-template-columns: 1fr 1fr; }
+  .srs-card { padding: 26px 18px; min-height: 190px; }
+  .srs-front-text { font-size: 18px; }
+  .srs-stat { min-width: 88px; }
 }
 
 @media print {
