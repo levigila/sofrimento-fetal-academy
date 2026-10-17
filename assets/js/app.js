@@ -135,7 +135,7 @@
       ctgCorrect: 0,
       ctgTotal: 0,
       lastModule: null,
-      sound: { type: 'chuva', volume: 0.35, fx: true, wanted: false, tab: 'musica', lastTrack: null }
+      sound: { type: 'chuva', volume: 0.35, fx: true, wanted: false, tab: 'musica', lastTrack: null, autoNext: true }
     };
   }
 
@@ -218,6 +218,11 @@
 
   function allQuestionsAnswered() {
     return QUESTIONS.length;
+  }
+
+  // questões reais de concursos/residência (têm a origem em `src`)
+  function examQuestions() {
+    return QUESTIONS.filter(q => q.src);
   }
 
   /* ==========================================================
@@ -520,18 +525,169 @@
     panel.classList.toggle('open', open);
     const btn = document.getElementById('soundBtn');
     if (btn) btn.classList.toggle('on', open);
+    // adianta o download da IFrame API: quando a faixa for clicada já está pronta
+    if (open) withYouTubeApi(() => {});
   }
 
   /* ==========================================================
      5b. PLAYER DE MÚSICA (YouTube oficial)
      ========================================================== */
   let ytCurrent = null;   // { id, t, a } ou { list }
+  let ytIndex = -1;       // posição em YT_TRACKS (-1 = link personalizado)
+  let ytPlayer = null;    // instância da IFrame Player API (detecta o fim da faixa)
+  let ytApiState = 0;     // 0 = não pedida · 1 = carregando · 2 = pronta · 3 = indisponível
+  let ytApiQueue = [];    // callbacks aguardando a API
+  let ytApiTimer = null;
 
   function ytEmbedSrc(track) {
     const base = 'https://www.youtube-nocookie.com/embed/';
-    const common = '&rel=0&modestbranding=1&playsinline=1&autoplay=1';
-    if (track.list) return base + 'videoseries?list=' + encodeURIComponent(track.list) + common;
-    return base + encodeURIComponent(track.id) + '?' + common.slice(1);
+    // enablejsapi=1 permite que a IFrame API "adote" este iframe e avise
+    // quando a faixa termina — é assim que a próxima entra sozinha.
+    const common = '&rel=0&modestbranding=1&playsinline=1&autoplay=1&enablejsapi=1';
+    const origin = (location.origin && location.origin !== 'null')
+      ? '&origin=' + encodeURIComponent(location.origin) : '';
+    if (track.list) return base + 'videoseries?list=' + encodeURIComponent(track.list) + common + origin;
+    return base + encodeURIComponent(track.id) + '?' + common.slice(1) + origin;
+  }
+
+  /* ---------------- IFrame Player API (carregada sob demanda) ---------------- */
+  function withYouTubeApi(cb) {
+    if (ytApiState === 2) { cb(null); return; }
+    if (ytApiState === 3) { cb('fail'); return; }
+    ytApiQueue.push(cb);
+    if (ytApiState === 1) return;
+
+    if (window.YT && window.YT.Player) { ytApiState = 2; flushYtQueue(); return; }
+
+    ytApiState = 1;
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = function () {
+      ytApiState = 2;
+      if (typeof prev === 'function') { try { prev(); } catch (e) {} }
+      flushYtQueue();
+    };
+
+    if (!document.getElementById('ytApiScript')) {
+      const s = document.createElement('script');
+      s.id = 'ytApiScript';
+      s.async = true;
+      s.src = 'https://www.youtube.com/iframe_api';
+      s.onerror = () => { ytApiState = 3; flushYtQueue(); };
+      document.head.appendChild(s);
+    }
+
+    // rede bloqueada ou muito lenta: não deixa a faixa sem tocar por causa disso
+    clearTimeout(ytApiTimer);
+    ytApiTimer = setTimeout(() => {
+      if (ytApiState === 1) { ytApiState = 3; flushYtQueue(); }
+    }, 9000);
+  }
+
+  function flushYtQueue() {
+    clearTimeout(ytApiTimer);
+    const q = ytApiQueue.splice(0);
+    const err = ytApiState === 2 ? null : 'fail';
+    q.forEach(fn => { try { fn(err); } catch (e) {} });
+  }
+
+  function ytPlayerVars(track) {
+    const vars = {
+      autoplay: 1, rel: 0, modestbranding: 1, playsinline: 1, enablejsapi: 1
+    };
+    if (location.origin && location.origin !== 'null') vars.origin = location.origin;
+    if (track.list) { vars.listType = 'playlist'; vars.list = track.list; }
+    return vars;
+  }
+
+  /* monta (ou reaproveita) o player da IFrame API — é ele que avisa o fim da faixa */
+  function mountApiPlayer(track) {
+    const stage = document.getElementById('ytStage');
+    if (!stage) return;
+
+    // já existe player vivo: só troca a faixa, sem recarregar o iframe
+    if (ytPlayer && typeof ytPlayer.loadVideoById === 'function') {
+      try {
+        if (track.list) ytPlayer.loadPlaylist({ list: track.list, listType: 'playlist', index: 0, startSeconds: 0 });
+        else ytPlayer.loadVideoById({ videoId: track.id });
+        return;
+      } catch (e) { /* player inválido: remonta abaixo */ }
+    }
+
+    detachPlayer();
+    stage.classList.add('loading');
+    stage.innerHTML = '<div id="ytPlayerMount"></div>';
+
+    ytPlayer = new window.YT.Player('ytPlayerMount', {
+      videoId: track.list ? undefined : track.id,
+      host: 'https://www.youtube-nocookie.com',
+      playerVars: ytPlayerVars(track),
+      events: {
+        onReady: () => { stage.classList.remove('loading'); },
+        onStateChange: onYtStateChange,
+        onError: onYtError
+      }
+    });
+  }
+
+  function onYtStateChange(e) {
+    const stage = document.getElementById('ytStage');
+    // 1 = tocando · 3 = carregando
+    if (stage && (e.data === 1 || e.data === 3)) stage.classList.remove('loading');
+    // 0 = faixa terminou → emenda a próxima
+    if (e.data === 0) advanceTrack();
+  }
+
+  function onYtError(e) {
+    const stage = document.getElementById('ytStage');
+    if (stage) stage.classList.remove('loading');
+    // 101/150 = o dono do vídeo não liberou a incorporação neste contexto
+    if (e && (e.data === 101 || e.data === 150)) {
+      const id = (ytCurrent && ytCurrent.id) || '';
+      setNote('O YouTube não liberou esta faixa para tocar embutida aqui. ' +
+        '<a href="https://www.youtube.com/watch?v=' + encodeURIComponent(id) + '" target="_blank" rel="noopener">Ouvir direto no YouTube</a>.', true);
+    }
+  }
+
+  /* plano B: sem a API, toca como antes (só não emenda a faixa seguinte) */
+  function mountPlainFrame(track) {
+    const stage = document.getElementById('ytStage');
+    if (!stage) return;
+    detachPlayer();
+    stage.classList.add('loading');
+    stage.innerHTML = '';
+
+    const frame = document.createElement('iframe');
+    frame.id = 'ytFrame';
+    frame.src = ytEmbedSrc(track);
+    frame.title = 'Player de música — ' + ytLabel(track);
+    frame.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+    frame.referrerPolicy = 'strict-origin-when-cross-origin';
+    frame.allowFullscreen = true;
+    frame.addEventListener('load', () => stage.classList.remove('loading'));
+    stage.appendChild(frame);
+
+    clearTimeout(playTrack._t);
+    playTrack._t = setTimeout(() => {
+      if (stage.classList.contains('loading')) {
+        stage.classList.remove('loading');
+        setNote('O YouTube demorou para responder. Se a rede bloquear o player, ' +
+          '<a href="https://www.youtube.com/watch?v=' + (track.id || '') + '" target="_blank" rel="noopener">abra a faixa direto no YouTube</a>.', true);
+      }
+    }, 12000);
+  }
+
+  function detachPlayer() {
+    if (!ytPlayer) return;
+    try { ytPlayer.destroy(); } catch (e) { /* iframe já saiu do DOM */ }
+    ytPlayer = null;
+  }
+
+  /* emenda a próxima faixa da lista (a última volta para a primeira) */
+  function advanceTrack() {
+    if (!state.sound.autoNext) return;
+    if (ytIndex < 0) return;                  // link personalizado: não há fila
+    const next = (ytIndex + 1) % YT_TRACKS.length;
+    playTrack(YT_TRACKS[next], null, { index: next, auto: true });
   }
 
   /* aceita watch?v=, youtu.be/, /embed/, /shorts/ ou playlist list= */
@@ -556,12 +712,12 @@
     return (track.t || 'Faixa') + (track.a ? ' · ' + track.a : '');
   }
 
-  function playTrack(track, btnEl) {
+  function playTrack(track, btnEl, opts) {
+    opts = opts || {};
     const stage = document.getElementById('ytStage');
     const ph = document.getElementById('ytPlaceholder');
     const now = document.getElementById('ytNow');
     const nowTxt = document.getElementById('ytNowTxt');
-    const note = document.getElementById('ytNote');
     if (!stage) return;
 
     if (!navigator.onLine) {
@@ -570,40 +726,31 @@
     }
 
     ytCurrent = track;
+    ytIndex = opts.index != null ? opts.index : (btnEl ? parseInt(btnEl.dataset.yt, 10) : -1);
+
     // música e som ambiente não devem tocar juntos
     if (Sound.isPlaying) Sound.stopAmbient();
+
     stage.classList.add('loading');
-    stage.innerHTML = '';
-    const frame = document.createElement('iframe');
-    frame.src = ytEmbedSrc(track);
-    frame.title = 'Player de música — ' + ytLabel(track);
-    frame.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
-    frame.referrerPolicy = 'strict-origin-when-cross-origin';
-    frame.allowFullscreen = true;
-    frame.addEventListener('load', () => stage.classList.remove('loading'));
-    stage.appendChild(frame);
-
-    // se o YouTube não responder em 12 s, avisa (rede bloqueada, etc.)
-    clearTimeout(playTrack._t);
-    playTrack._t = setTimeout(() => {
-      if (stage.classList.contains('loading')) {
-        stage.classList.remove('loading');
-        setNote('O YouTube demorou para responder. Se a rede bloquear o player, ' +
-          '<a href="https://www.youtube.com/watch?v=' + (track.id || '') + '" target="_blank" rel="noopener">abra a faixa direto no YouTube</a>.', true);
-      }
-    }, 12000);
-
-    if (now && nowTxt) { now.hidden = false; nowTxt.textContent = ytLabel(track); }
-    if (note) { note.textContent = ''; note.classList.remove('err'); }
     if (ph) ph.remove();
 
+    if (now && nowTxt) { now.hidden = false; nowTxt.textContent = ytLabel(track); }
+    setNote('');
+    syncAutoNextUI();
+
     // destaca a faixa ativa
-    $$('#ytTracks .yt-track').forEach(b => b.classList.toggle('on', b === btnEl));
+    $$('#ytTracks .yt-track').forEach((b, i) => b.classList.toggle('on', i === ytIndex));
 
     state.sound.lastTrack = track.id || track.list || null;
     saveState();
     syncSoundUI();
-    Sound.fx.click();
+    if (!opts.auto) Sound.fx.click();
+
+    // tenta a IFrame API (sabe quando a faixa acaba); sem ela, toca no iframe simples
+    withYouTubeApi(err => {
+      if (err || !window.YT || typeof window.YT.Player !== 'function') { mountPlainFrame(track); return; }
+      mountApiPlayer(track);
+    });
   }
 
   function stopTrack() {
@@ -611,6 +758,7 @@
     const now = document.getElementById('ytNow');
     if (!stage) return;
     clearTimeout(playTrack._t);
+    detachPlayer();
     stage.classList.remove('loading');
     stage.innerHTML =
       '<div class="yt-placeholder" id="ytPlaceholder">' +
@@ -619,6 +767,7 @@
       '</div>';
     if (now) now.hidden = true;
     ytCurrent = null;
+    ytIndex = -1;
     state.sound.lastTrack = null;
     saveState();
     $$('#ytTracks .yt-track').forEach(b => b.classList.remove('on'));
@@ -632,6 +781,39 @@
     note.innerHTML = msg || '';
     note.classList.toggle('err', !!isErr);
   }
+
+  function nextTrack() {
+    if (ytIndex < 0) return null;
+    return YT_TRACKS[(ytIndex + 1) % YT_TRACKS.length];
+  }
+
+  function syncAutoNextUI() {
+    const btn = document.getElementById('ytAuto');
+    if (!btn) return;
+    const on = !!state.sound.autoNext;
+    btn.classList.toggle('on', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    const nxt = nextTrack();
+    btn.title = on
+      ? 'Avanço automático ligado' + (nxt ? ' — a seguir: ' + nxt.t : '') + '. Clique para desligar.'
+      : 'Avanço automático desligado. Clique para a próxima faixa entrar sozinha.';
+  }
+
+  /* Gancho mínimo de inspeção/teste: permite simular o fim da faixa
+     sem esperar a música inteira tocar. */
+  window.__sfaMusic = {
+    status: () => ({
+      index: ytIndex,
+      id: ytCurrent ? (ytCurrent.id || null) : null,
+      list: ytCurrent ? (ytCurrent.list || null) : null,
+      track: ytCurrent ? (ytCurrent.id || ytCurrent.list) : null,
+      label: ytCurrent ? ytLabel(ytCurrent) : null,
+      autoNext: !!state.sound.autoNext,
+      api: ytApiState,
+      hasPlayer: !!ytPlayer
+    }),
+    endTrack: () => advanceTrack()
+  };
 
   function buildMusicPanel() {
     const wrap = document.getElementById('ytTracks');
@@ -654,6 +836,17 @@
 
     const stop = document.getElementById('ytStop');
     if (stop) stop.addEventListener('click', stopTrack);
+
+    const auto = document.getElementById('ytAuto');
+    if (auto) {
+      auto.addEventListener('click', () => {
+        state.sound.autoNext = !state.sound.autoNext;
+        saveState();
+        syncAutoNextUI();
+        Sound.fx.click();
+      });
+    }
+    syncAutoNextUI();
 
     const input = document.getElementById('ytInput');
     const load = document.getElementById('ytLoad');
@@ -879,6 +1072,7 @@
     html +=
       '<div class="shortcut-grid">' +
         shortcut('🧪', 'Banco de Questões', allQuestionsAnswered() + ' questões comentadas · por módulo ou geral', 'quiz') +
+        shortcut('📄', 'Questões de Prova', examQuestions().length + ' questões reais de concursos e residência, com a banca', 'quiz/prova') +
         shortcut('🩺', 'Casos Clínicos', CASES.length + ' casos reais com conduta comentada', 'casos') +
         shortcut('📈', 'Simulador de CTG', '10 traçados ao vivo + modo desafio com pontuação', 'ctg') +
         shortcut('🏆', 'Meus Selos', Object.keys(state.badges).length + ' de ' + BADGES.length + ' conquistados', 'selos') +
@@ -1307,12 +1501,17 @@
     const shell = document.getElementById('quizShell');
     if (!shell) return;
 
-    let pool = modId ? QUESTIONS.filter(q => q.m === modId) : QUESTIONS.slice();
+    // "prova" = treino só com as questões reais de concursos/residência
+    const examOnly = modId === 'prova';
+    let pool;
+    if (examOnly) pool = QUESTIONS.filter(q => q.src);
+    else pool = modId ? QUESTIONS.filter(q => q.m === modId) : QUESTIONS.slice();
     if (!pool.length) pool = QUESTIONS.slice();
     pool = shuffle(pool);
 
     quiz = {
-      module: modId || null,
+      module: examOnly ? null : (modId || null),
+      examOnly,
       items: pool.map(buildQuizItem),
       i: 0,
       correct: 0,
@@ -1331,18 +1530,29 @@
       module: q.m,
       q: q.q,
       e: q.e,
+      src: q.src || null,
       options: order.map(i => q.o[i]),
       answer: order.indexOf(q.a)
     };
+  }
+
+  /* etiqueta da banca/órgão/ano — só aparece nas questões de provas reais */
+  function sourceTag(src) {
+    if (!src) return '';
+    return '<div class="q-src" title="Origem da questão">' +
+      '<span class="q-src-ico">🏛️</span>' + esc(src) + '</div>';
   }
 
   function renderQuizShell() {
     const shell = document.getElementById('quizShell');
     if (!shell) return;
     const mod = quiz.module ? moduleById(quiz.module) : null;
+    const label = quiz.examOnly
+      ? '📄 Questões de prova (' + quiz.items.length + ')'
+      : (mod ? mod.icon + ' ' + esc(mod.title) : '🌐 Todos os módulos');
     shell.innerHTML =
       '<div class="quiz-top">' +
-        '<span class="chip">' + (mod ? mod.icon + ' ' + esc(mod.title) : '🌐 Todos os módulos') + '</span>' +
+        '<span class="chip">' + label + '</span>' +
         '<div class="quiz-progress"><div id="quizBar"></div></div>' +
         '<span class="quiz-counter" id="quizCounter">1 / ' + quiz.items.length + '</span>' +
       '</div>' +
@@ -1366,8 +1576,12 @@
 
     body.innerHTML =
       '<div class="q-card">' +
-        '<span class="q-module">' + esc(modName) + '</span>' +
+        '<div class="q-tags">' +
+          '<span class="q-module">' + esc(modName) + '</span>' +
+          (item.src ? '<span class="q-badge">📄 questão de prova</span>' : '') +
+        '</div>' +
         '<div class="q-text">' + esc(item.q) + '</div>' +
+        sourceTag(item.src) +
         '<div class="q-options" id="qOptions">' +
           item.options.map((o, i) =>
             '<button class="q-opt" data-opt="' + i + '">' +
@@ -1415,7 +1629,7 @@
       Sound.fx.correct();
       confetti(46);
     } else {
-      quiz.wrong.push({ q: item.q, a: item.options[item.answer], e: item.e });
+      quiz.wrong.push({ q: item.q, a: item.options[item.answer], e: item.e, src: item.src });
       state.streak = 0;
       gained = 3;
       Sound.fx.wrong();
@@ -1439,6 +1653,7 @@
           '<div class="qf-head">' + (isRight ? '✅ Isso! Resposta correta.' : '❌ Não foi essa. Veja o porquê:') + '</div>' +
           '<div><b>Resposta certa:</b> ' + esc(item.options[item.answer]) + '</div>' +
           '<div style="margin-top:8px">' + esc(item.e) + '</div>' +
+          (item.src ? '<div class="qf-src">🏛️ ' + esc(item.src) + '</div>' : '') +
         '</div>';
     }
 
@@ -1482,15 +1697,16 @@
         '<div class="result-emoji">' + emoji + '</div>' +
         '<div class="result-title">' + title + '</div>' +
         '<div class="result-sub">Você acertou <b>' + quiz.correct + '</b> de <b>' + total + '</b> questões' +
-          (quiz.module ? ' de ' + esc(MODULE_NAMES[quiz.module] || '') : '') + '.</div>' +
+          (quiz.examOnly ? ' de provas reais' : (quiz.module ? ' de ' + esc(MODULE_NAMES[quiz.module] || '') : '')) + '.</div>' +
         '<div class="result-stats">' +
           '<div class="rs"><div class="rs-v">' + pct + '%</div><div class="rs-l">aproveitamento</div></div>' +
           '<div class="rs"><div class="rs-v">+' + quiz.xpEarned + '</div><div class="rs-l">XP nesta rodada</div></div>' +
           '<div class="rs"><div class="rs-v">' + state.bestStreak + '</div><div class="rs-l">melhor sequência</div></div>' +
         '</div>' +
         '<div class="result-actions">' +
-          '<button class="btn primary" data-action="reset-quiz" data-module="' + (quiz.module || '') + '">↻ Refazer este quiz</button>' +
+          '<button class="btn primary" data-action="reset-quiz" data-module="' + (quiz.examOnly ? 'prova' : (quiz.module || '')) + '">↻ Refazer este quiz</button>' +
           '<button class="btn" data-nav="quiz">🌐 Quiz geral</button>' +
+          '<button class="btn" data-nav="quiz/prova">📄 Só questões de prova</button>' +
           '<button class="btn" data-nav="ctg">📈 Simulador de CTG</button>' +
           '<button class="btn ghost" data-nav="inicio">🏠 Início</button>' +
         '</div>' +
@@ -1501,6 +1717,7 @@
                 '<div class="review-q">' + esc(w.q) + '</div>' +
                 '<div class="review-a">✅ ' + esc(w.a) + '</div>' +
                 '<div class="review-e">' + esc(w.e) + '</div>' +
+                (w.src ? '<div class="review-src">🏛️ ' + esc(w.src) + '</div>' : '') +
               '</div>'
             ).join('') + '</div>'
           : '<div class="sec sec-pearl" style="margin-top:24px;text-align:left">' +

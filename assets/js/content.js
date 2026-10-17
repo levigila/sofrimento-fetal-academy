@@ -758,7 +758,207 @@ const QUESTIONS = [
   { m: 'misto', q: 'Qual é o termo atual preferido em vez de "sofrimento fetal"?', o: ['Asfixia fetal', 'Padrão cardíaco fetal não tranquilizador', 'Angústia fetal', 'Insuficiência fetal'], a: 1, e: 'O termo foi substituído por ser mais preciso e menos estigmatizante, evitando intervenções desnecessárias.' },
   { m: 'misto', q: 'Uma CTG categoria I significa:', o: ['Feto com pH anormal', 'Feto com acidose', 'Feto com estado ácido-base normal no momento da observação', 'Necessidade de cesariana imediata'], a: 2, e: 'Categoria I é altamente preditiva de estado ácido-base normal — pode seguir vigilância de rotina.' },
   { m: 'misto', q: 'Qual conjunto de achados exige parto IMEDIATO?', o: ['DIP I isolado com variabilidade moderada', 'Bradicardia com ausência de variabilidade e desacelerações recorrentes', 'Acelerações presentes e basal 140 bpm', 'DIP III típica com variabilidade normal'], a: 1, e: 'Esse é o padrão categoria III — prediz acidose e exige reanimação intrauterina e parto imediato.' },
-  { m: 'misto', q: 'Oligodrâmnio no sofrimento fetal crônico ocorre por:', o: ['Aumento da diurese fetal', 'Redução da produção de urina fetal por centralização renal', 'Aumento da produção de líquido pulmonar', 'Rotura prematura de membranas obrigatória'], a: 1, e: 'Na centralização o rim é um território "sacrificado" — o feto produz menos urina e o líquido diminui.' }
+  { m: 'misto', q: 'Oligodrâmnio no sofrimento fetal crônico ocorre por:', o: ['Aumento da diurese fetal', 'Redução da produção de urina fetal por centralização renal', 'Aumento da produção de líquido pulmonar', 'Rotura prematura de membranas obrigatória'], a: 1, e: 'Na centralização o rim é um território "sacrificado" — o feto produz menos urina e o líquido diminui.' },
+
+  /* ============================================================
+     QUESTÕES DE PROVAS REAIS
+     Extraídas de concursos públicos, provas de título de
+     especialista e exames de residência médica no Brasil.
+     O campo `src` guarda a origem e aparece na interface.
+     ============================================================ */
+
+  /* --- SES-SP / Quadrix 2023 --- */
+  { m: 'conduta', src: 'SES-SP · Quadrix · 2023 · Residência Médica em GO',
+    q: 'CTG durante o trabalho de parto de gestante a termo mostra desacelerações tardias recorrentes (DIP II), que iniciam após o pico da contração e retornam à linha de base ao fim dela. Diante desse quadro de sofrimento fetal agudo por insuficiência uteroplacentária, qual é o primeiro passo da reanimação intrauterina?',
+    o: ['Continuar a monitorização habitual e reavaliar o traçado minuciosamente após 30 minutos',
+        'Mudar a posição materna para decúbito lateral esquerdo, administrar O₂ por máscara facial, infundir fluidos EV e suspender imediatamente a ocitocina se estiver em uso',
+        'Realizar a manobra de Kristeller imediatamente para apressar o parto por via vaginal',
+        'Indicar amniotomia imediata para avaliar a densidade do mecônio e guiar a via de parto'],
+    a: 1, e: 'As manobras de reanimação intrauterina vêm antes de qualquer decisão cirúrgica: o decúbito lateral esquerdo retira a compressão da veia cava, o O₂ e a hidratação melhoram a oferta, e a suspensão da ocitocina devolve o intervalo de reoxigenação entre contrações.' },
+
+  /* --- HUCAM-UFES 2013 --- */
+  { m: 'diagnostico', src: 'HUCAM-UFES · Comissão de Residência Médica · 2013 · Residência Médica',
+    q: 'O sofrimento fetal agudo (SFA) acontece principalmente durante o trabalho de parto. Sobre os métodos diagnósticos e a fisiopatologia do SFA, assinale a alternativa INCORRETA:',
+    o: ['O SFA pode ter como causa mecânica ou dinâmica a hipersistolia ou a hipertonia uterina',
+        'O diagnóstico presuntivo de SFA pode ser feito clinicamente pela ausculta intermitente dos batimentos cardíacos fetais durante e logo após as contrações',
+        'A cardiotocografia é um dos exames primordiais para avaliar a vitalidade fetal, mas é formalmente contraindicada no trabalho de parto de pacientes com rotura prematura de membranas',
+        'A perda da variabilidade normal (traçado liso, menor que 5 bpm) associada a desacelerações tardias é forte indicativo de acidose fetal'],
+    a: 2, e: 'A rotura prematura de membranas NÃO contraindica a cardiotocografia. Ao contrário: o oligodrâmnio que se segue favorece compressões de cordão (DIP III) e o risco de corioamnionite pede justamente monitorização.' },
+
+  /* --- AMP 2022 --- */
+  { m: 'ctg', src: 'AMP · Associação Médica do Paraná · 2022 · Residência Médica',
+    q: 'Gestante de 39 semanas em trabalho de parto apresenta linha de base de 140 bpm, variabilidade de 15 bpm, acelerações transitórias presentes e ausência de desacelerações. De acordo com o NICHD, esse traçado é classificado como categoria:',
+    o: ['Categoria I (normal)', 'Categoria II (indeterminado)', 'Categoria III (anormal)', 'Categoria IV (patológico)'],
+    a: 0, e: 'Categoria I exige linha de base 110-160 bpm, variabilidade moderada (6-25 bpm) e ausência de desacelerações tardias ou variáveis — com ou sem acelerações. Traçado totalmente normal é, por definição, categoria I.' },
+
+  /* --- ENARE / Ebserh 2021 --- */
+  { m: 'fisiopato', src: 'ENARE · Hospital Universitário/Ebserh · 2021 · Residência Médica',
+    q: 'Feto com restrição de crescimento grave de início precoce. Ao Doppler, observa-se fluxo reverso durante a diástole na artéria umbilical. Qual o significado desse achado e a conduta recomendada em uma gestação de 31 semanas?',
+    o: ['Indica bem-estar fetal; manter conduta expectante até o termo',
+        'Traduz compressão intermitente de cordão umbilical; realizar amnioinfusão',
+        'Significa que mais de 70% das vilosidades placentárias estão obliteradas, com altíssimo risco de óbito; internação, corticoterapia e avaliação do ducto venoso para programar o parto',
+        'Representa centralização fetal isolada; induzir o parto vaginal imediatamente com ocitocina'],
+    a: 2, e: 'A diástole reversa reflete resistência placentária extrema — marcador de gravidade máxima na insuficiência placentária crônica. Interna-se, faz-se corticoide para maturação pulmonar e avalia-se o ducto venoso para decidir o momento exato do parto.' },
+
+  /* --- VUNESP / Unesp 2020 --- */
+  { m: 'ctg', src: 'VUNESP · Unesp · 2020 · Residência Médica',
+    q: 'Primigesta de 40 semanas, em fase ativa de trabalho de parto (6 cm), apresenta desacelerações que iniciam junto com a contração e terminam quando ela cessa, com nadir coincidindo com o pico da contração. Qual a causa desse padrão e a conduta correta?',
+    o: ['Insuficiência placentária; realizar cesárea imediata',
+        'Compressão do polo cefálico fetal (DIP I ou precoce); evento benigno por reflexo vagal, necessitando apenas de acompanhamento do parto',
+        'Compressão de cordão umbilical (DIP III); mudar a posição da paciente',
+        'Descolamento prematuro de placenta; infundir expansor volêmico'],
+    a: 1, e: 'As desacelerações precoces (DIP I) têm início, nadir e fim sincrônicos com a contração. Decorrem do reflexo vagal pela compressão mecânica do polo cefálico no canal de parto — são benignas e não exigem intervenção.' },
+
+  /* --- SUS-PE 2022 --- */
+  { m: 'fisiopato', src: 'SUS-PE · Secretaria de Saúde de Pernambuco · 2022 · Residência Médica',
+    q: 'A centralização fetal é um mecanismo adaptativo do feto em vigência de hipóxia crônica. Qual opção descreve corretamente os achados Doppler que a caracterizam?',
+    o: ['Aumento da resistência na artéria cerebral média e diminuição na artéria umbilical',
+        'Diminuição da resistência na artéria cerebral média (vasodilatação) e aumento da resistência na artéria umbilical',
+        'Aumento generalizado da resistência em ambos os vasos',
+        'Ausência de fluxo diastólico em ambos os vasos'],
+    a: 1, e: 'Para preservar cérebro, coração e adrenais, o feto promove vasodilatação cerebral (cai o índice de pulsatilidade na ACM) enquanto a disfunção placentária eleva a resistência na umbilical.' },
+
+  /* --- SURCE 2021 --- */
+  { m: 'ctg', src: 'SURCE · Residência Médica do Ceará · 2021 · Processo Seletivo Unificado',
+    q: 'Um traçado cardiotocográfico apresenta variabilidade ausente associada a desacelerações tardias recorrentes. Segundo os critérios do NICHD, qual a classificação e o significado?',
+    o: ['Categoria II; traçado suspeito que pode ser corrigido com hidratação',
+        'Categoria III; traçado preditor de estado ácido-base fetal anormal ao nascimento, exigindo resolução rápida se não corrigido',
+        'Categoria I; traçado normal, pois as desacelerações limpam os metabólitos',
+        'Categoria III; ritmo sinusoidal benigno do sono'],
+    a: 1, e: 'Categoria III = variabilidade ausente + desacelerações tardias recorrentes, variáveis recorrentes, bradicardia, ou padrão sinusoidal. Correlaciona-se fortemente com acidose e asfixia grave.' },
+
+  /* --- IDECAN / SMS Fortaleza 2023 --- */
+  { m: 'diagnostico', src: 'IDECAN · SMS de Fortaleza-CE · 2023 · Médico Ginecologista Obstetra',
+    q: 'No Perfil Biofísico Fetal (PBF) de Manning, qual parâmetro se altera mais precocemente frente a uma hipóxia aguda e qual reflete o comprometimento de longo prazo (crônico)?',
+    o: ['Movimento corporal (precoce) e tônus fetal (crônico)',
+        'Reatividade da frequência cardíaca fetal / CTG (precoce) e volume de líquido amniótico / ILA (crônico)',
+        'Movimento respiratório (precoce) e movimento corporal (crônico)',
+        'Tônus fetal (precoce) e reatividade cardíaca (crônico)'],
+    a: 1, e: 'A reatividade cardíaca (NST) é o parâmetro mais sensível e o primeiro a desaparecer na hipóxia aguda. O volume de líquido amniótico reflete a hemodinâmica crônica: hipóxia crônica → vasoconstrição renal fetal → queda da diurese → oligodrâmnio.' },
+
+  /* --- FGV / SES-DF 2023 --- */
+  { m: 'ctg', src: 'FGV · SES-DF · 2023 · Residência Médica',
+    q: 'Durante a monitorização eletrônica fetal intraparto observa-se queda abrupta da FCF (início ao nadir < 30 segundos), com redução ≥ 15 bpm, duração de 40 segundos e formato variável, ocorrendo em mais de 50% das contrações. Trata-se de:',
+    o: ['Desacelerações tardias recorrentes', 'Desacelerações precoces benignas',
+        'Desacelerações variáveis recorrentes (DIP III)', 'Bradicardia fetal sustentada'],
+    a: 2, e: 'Queda abrupta (início-nadir < 30 s) e sem relação fixa com a contração define a desaceleração variável (DIP III). Ocorrendo em mais de 50% das contrações em 20 minutos, é recorrente — típica de compressão de cordão.' },
+
+  /* --- AMRIGS 2021 --- */
+  { m: 'neonatal', src: 'AMRIGS · Associação Médica do Rio Grande do Sul · 2021 · Seleção de Residência',
+    q: 'Qual achado na gasometria do sangue de cordão umbilical colhido imediatamente após o nascimento é o critério mais rigoroso para definir asfixia perinatal com risco de encefalopatia hipóxico-isquêmica?',
+    o: ['pH de 7,15 e pCO₂ de 50 mmHg',
+        'pH < 7,00 e déficit de bases (base excess) ≤ -12 mmol/L',
+        'pH de 7,25 e bicarbonato de 18 mEq/L',
+        'pH < 7,10 e excesso de bases de -8 mmol/L'],
+    a: 1, e: 'Os consensos internacionais de neonatologia e obstetrícia estabelecem, para asfixia grave com repercussão sistêmica e neurológica, o corte de pH arterial de cordão < 7,00 e BE ≤ -12 mmol/L.' },
+
+  /* --- CEPERJ 2020 --- */
+  { m: 'ctg', src: 'CEPERJ · MD de Rio das Ostras · 2020 · Concurso Médico Obstetra',
+    q: 'A causa mais comum de desacelerações variáveis recorrentes (DIP III) no período expulsivo do trabalho de parto é:',
+    o: ['Compressão do cordão umbilical pelo corpo ou membros fetais, ou por circular de cordão cervical',
+        'Descolamento de placenta',
+        'Uso de anestesia raquidiana que causa hipotensão',
+        'Excesso de contrações por ocitocina exógena'],
+    a: 0, e: 'O mecanismo do DIP III é estritamente mecânico — compressão de cordão —, muito frequente na descida do feto durante o expulsivo.' },
+
+  /* --- FCC / TRT-2R 2018 --- */
+  { m: 'diagnostico', src: 'FCC · TRT-2R · 2018 · Médico do Trabalho / Ginecologia',
+    q: 'Em relação ao perfil biofísico fetal modificado, que utiliza o índice de líquido amniótico (ILA) e o teste não estressante (CTG), assinale a correta:',
+    o: ['Um ILA baixo com CTG reativa indica sofrimento agudo terminal',
+        'A CTG avalia a oxigenação aguda do sistema nervoso central e o ILA avalia a função placentária crônica',
+        'Ambos avaliam apenas parâmetros de curto prazo',
+        'O teste é altamente invasivo e só deve ser feito no parto'],
+    a: 1, e: 'O perfil modificado une a agudeza da CTG com a cronicidade do volume de líquido amniótico — é um excelente método de rastreamento e não é invasivo.' },
+
+  /* --- IADES / SES-DF 2018 --- */
+  { m: 'ctg', src: 'IADES · SES-DF · 2018 · Médico Ginecologista e Obstetra',
+    q: 'O traçado cardiotocográfico que exibe oscilações rítmicas e suaves, parecendo uma onda senoidal pura, sem acelerações e com variabilidade de curto prazo ausente é indicativo de:',
+    o: ['Anemia fetal grave ou hipóxia terminal (ritmo sinusoidal)',
+        'Sono fetal profundo fisiológico',
+        'Taquissistolia uterina responsiva a oxigênio',
+        'Efeito colateral comum de analgésicos leves'],
+    a: 0, e: 'O ritmo sinusoidal verdadeiro é um sinal pré-morte, associado à anemia fetal grave (isoimunização Rh, hemorragia fetomaterna) ou à asfixia severa. É categoria III.' },
+
+  /* --- USP-RP 2022 --- */
+  { m: 'fisiopato', src: 'USP-RP · HC de Ribeirão Preto · 2022 · Residência Médica',
+    q: 'O Doppler do ducto venoso com onda A reversa em feto com restrição de crescimento de 28 semanas denota:',
+    o: ['Início da fase de centralização',
+        'Bom prognóstico e indicação de parto vaginal',
+        'Falência cardíaca fetal (disfunção miocárdica) com risco iminente de óbito; indicação de interrupção após corticoterapia',
+        'Fisiologia normal do segundo trimestre tardio'],
+    a: 2, e: 'A onda A reversa traduz contração atrial contra um ventrículo direito hipertenso e complacência miocárdica falha — indica óbito iminente e obriga a resolver a gestação depois do corticoide.' },
+
+  /* --- NUCEPE / SES-PI 2021 --- */
+  { m: 'causas', src: 'NUCEPE · SES-PI · 2021 · Concurso Médico Obstetra',
+    q: 'A definição clássica de taquissistolia uterina que pode acarretar sofrimento fetal agudo é:',
+    o: ['Mais de 5 contrações em um intervalo de 10 minutos, calculadas na média de um período de 30 minutos',
+        'Mais de 3 contrações em 10 minutos no trabalho de parto inicial',
+        'Presença de dor lombar intensa entre as contrações normais',
+        'Duração da contração maior que 30 segundos'],
+    a: 0, e: 'Taquissistolia = mais de 5 contrações em 10 minutos. Sem pausa, o miométrio não relaxa e o feto não reoxigena entre as contrações — a asfixia é progressiva.' },
+
+  /* --- UFPR 2023 --- */
+  { m: 'ctg', src: 'UFPR · Hospital de Clínicas UFPR · 2023 · Residência Médica',
+    q: 'Qual dos medicamentos administrados à gestante pode causar redução temporária da variabilidade da FCF na cardiotocografia sem significar sofrimento fetal por hipóxia?',
+    o: ['Corticosteroides (ex.: betametasona) e sulfato de magnésio',
+        'Ocitocina e prostaglandinas',
+        'Suplementos de ferro e ácido fólico',
+        'Cefalosporinas de primeira geração'],
+    a: 0, e: 'Corticoide para maturidade pulmonar e sulfato de magnésio para neuroproteção deprimem transitoriamente o SNC fetal, reduzindo a variabilidade sem hipóxia de base — cuidado para não interpretar como sofrimento.' },
+
+  /* --- COSEAC / UFF 2022 --- */
+  { m: 'conduta', src: 'COSEAC · UFF / Hospital Universitário · 2022 · Residência Médica',
+    q: 'Gestante de 39 semanas em trabalho de parto rompe a bolsa e palpa-se estrutura cilíndrica e pulsátil adiante da apresentação cefálica. A CTG mostra bradicardia súbita de 70 bpm. Qual o diagnóstico e a conduta?',
+    o: ['Apresentação pélvica; aguardar evolução',
+        'Prolapso de cordão umbilical; elevar manualmente a apresentação fetal, colocar a paciente em posição genupeitoral e realizar cesárea de emergência',
+        'Descolamento de placenta; realizar amniotomia terapêutica',
+        'Inversão uterina; fazer manobra de Taxe'],
+    a: 1, e: 'Prolapso de cordão é emergência obstétrica absoluta: a compressão mecânica bloqueia a oferta de oxigênio. Descomprime-se empurrando a apresentação para cima e corre-se para a cesárea.' },
+
+  /* --- SGORJ 2021 --- */
+  { m: 'conduta', src: 'SGORJ · Associação de Ginecologia do RJ · 2021 · Título de Especialista (TEGO)',
+    q: 'Feto a termo com traçado sem acelerações transitórias há 40 minutos, mas com variabilidade moderada de 10 bpm e sem desacelerações. Qual a conduta inicial ideal?',
+    o: ['Realizar estimulação acústica ou mecânica fetal, pois o feto pode estar apenas em ciclo de sono fisiológico',
+        'Indicar cesárea imediata por sofrimento fetal agudo silencioso',
+        'Iniciar infusão de ocitocina em altas doses',
+        'Realizar fórcipe de alívio'],
+    a: 0, e: 'Ciclos de sono fetal duram tipicamente 20 a 40 minutos. Com variabilidade normal, hipóxia grave está afastada — a ausência isolada de acelerações justifica estimular o feto antes de intervir.' },
+
+  /* --- CESUP / UNEMAT 2020 --- */
+  { m: 'fisiopato', src: 'CESUP · UNEMAT · 2020 · Concurso Público Médico Obstetra',
+    q: 'Qual vaso fetal apresenta a maior saturação de oxigênio na circulação fetal intrauterina e reflete o status metabólico vindo da placenta?',
+    o: ['Artéria umbilical', 'Veia umbilical', 'Artéria cerebral média', 'Aorta descendente'],
+    a: 1, e: 'Invertendo a lógica pós-natal: na circulação fetal é a veia umbilical que traz o sangue rico em oxigênio e nutrientes da placenta para o feto. As artérias umbilicais levam o sangue desoxigenado de volta.' },
+
+  /* --- IBFC / EBSERH-AP 2022 --- */
+  { m: 'ctg', src: 'IBFC · EBSERH / Amapá · 2022 · Médico Obstetra',
+    q: 'A desaceleração prolongada da frequência cardíaca fetal é aquela cuja queda da FCF em relação à linha de base dura entre:',
+    o: ['2 e 10 minutos', '30 e 60 segundos', '10 e 15 minutos', 'Mais de 20 minutos obrigatoriamente'],
+    a: 0, e: 'Segundo NICHD/ACOG, a desaceleração é prolongada quando dura mais de 2 e menos de 10 minutos. Acima de 10 minutos, passa a ser considerada mudança da linha de base (bradicardia).' },
+
+  /* --- Concursos unificados de residência / SUS-Geral 2022 --- */
+  { m: 'diagnostico', src: 'Concursos Unificados de Residência Médica / SUS-Geral · 2022 · Prova Geral',
+    q: 'No acompanhamento de gestações de alto risco (pré-eclâmpsia, restrição de crescimento fetal), a avaliação da vitalidade fetal crônica é crítica. Sobre os métodos de avaliação da vitalidade fetal, assinale a alternativa CORRETA:',
+    o: ['O Doppler da artéria umbilical avalia o fluxo de sangue que retorna diretamente da placenta para o feto',
+        'O DIP umbilical (variável), de forma isolada e em episódios únicos, associa-se obrigatoriamente a sofrimento fetal irreversível',
+        'A cardiotocografia anteparto avalia, de forma indireta, o nível de oxigenação do sistema nervoso central fetal através da reatividade e da variabilidade',
+        'A presença isolada de incisura protodiastólica bilateral nas artérias uterinas no terceiro trimestre fecha o diagnóstico definitivo de sofrimento fetal agudo'],
+    a: 2, e: 'A variabilidade e as acelerações dependem de quimiorreceptores e córtex cerebral fetal íntegros: SNC bem oxigenado = traçado reativo. Lembre que a artéria umbilical leva sangue DO feto PARA a placenta, e não o contrário.' },
+
+  /* --- Prefeitura de Ilha de Itamaracá-PE / IDHTEC 2023 --- */
+  { m: 'diagnostico', src: 'Prefeitura de Ilha de Itamaracá-PE · IDHTEC · 2023 · Concurso Médico GO',
+    q: 'Sobre o diagnóstico intraparto de sofrimento fetal, a oximetria fetal de pulso (modalidade de monitoração interna) é caracterizada por todos os itens abaixo, EXCETO:',
+    o: ['Medida contínua da saturação de oxigênio fetal (SatO₂), que tipicamente varia entre 30% e 70% no feto hígido',
+        'Mede a proporção de hemoglobina que carrega o oxigênio no leito tecidual fetal',
+        'Monitora em tempo real a oxigenação dos tecidos periféricos fetais durante o estresse das contrações',
+        'Deve ser realizada de forma rotineira em todas as gestações de baixo risco sem alterações da frequência cardíaca fetal'],
+    a: 3, e: 'Métodos invasivos como a oximetria de pulso fetal ou a análise de pH do couro cabeludo não são de rotina em gestações de baixo risco. Restringem-se a casos com traçados indeterminados ou suspeitos (categoria II) para evitar cesáreas desnecessárias.' },
+
+  /* --- Concurso público geral para médicos 2021 --- */
+  { m: 'misto', src: 'Concurso Público Geral para Médicos · 2021 · Médico Obstetra',
+    q: 'Sobre sofrimento fetal crônico e agudo, analise as assertivas: 1) A cardiotocografia e a ultrassonografia obstétrica com dopplerfluxometria estão entre os testes preconizados para avaliar a saúde fetal. 2) A taquicardia fetal pode ter origem não hipóxica (hipertermia ou tireotoxicose materna) ou hipóxica (infecção intrauterina). 3) A redução parcial do oxigênio fetal (hipoxemia) causa invariavelmente morte imediata ou dano cerebral estrutural irreparável em 100% dos episódios. 4) A hipoxemia crônica fetal grave leva à perda sequencial dos parâmetros dinâmicos (movimentos fetais, tônus e movimentos respiratórios) identificados no Perfil Biofísico Fetal. Assinale a sequência CORRETA:',
+    o: ['V - V - F - V', 'V - F - V - F', 'F - V - F - V', 'V - V - V - F'],
+    a: 0, e: 'A assertiva 3 é falsa: o feto tem potentes mecanismos adaptativo-compensatórios (centralização, metabolismo anaeróbio temporário) que impedem que toda hipoxemia resulte em óbito ou lesão neurológica imediata. Desconfie sempre de modificadores absolutos como "invariavelmente" e "100%".' }
 ];
 
 /* Ordem embaralhada determinística por seed simples */
