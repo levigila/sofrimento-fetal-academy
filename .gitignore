@@ -1,0 +1,10 @@
+# Ambiente virtual Python (não usado pelo site — o projeto é 100% estático)
+.venv/
+
+# Scaffolding de testes locais
+_work/
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini

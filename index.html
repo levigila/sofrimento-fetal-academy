@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sofrimento Fetal Academy · Guia Interativo de Obstetrícia</title>
+<meta name="description" content="Plataforma interativa para aprender sofrimento fetal: conceitos, fisiopatologia, cardiotocografia (CTG) com simulador ao vivo, casos clínicos e quiz gamificado. Feito para estudantes de medicina.">
+<meta name="theme-color" content="#0b1220">
+<meta property="og:title" content="Sofrimento Fetal Academy">
+<meta property="og:description" content="Aprenda sofrimento fetal de forma visual e interativa: simulador de CTG, casos clínicos e quiz com pontuação.">
+<meta property="og:type" content="website">
+
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🫀</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Fontes carregadas de forma NÃO bloqueante: se a rede falhar ou estiver
+     offline, o site renderiza na hora com as fontes do sistema e depois
+     faz o upgrade sozinho. -->
+<link rel="stylesheet" media="print" onload="this.media='all'"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=JetBrains+Mono:wght@400;600&display=swap">
+<noscript>
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=JetBrains+Mono:wght@400;600&display=swap">
+</noscript>
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<!-- ============ CONFETTI ============ -->
+<canvas id="confetti" aria-hidden="true"></canvas>
+
+<!-- ============ TOPBAR ============ -->
+<header class="topbar">
+  <button id="menuBtn" class="icon-btn only-mobile" aria-label="Abrir menu">☰</button>
+
+  <a class="brand" href="#inicio">
+    <span class="brand-icon">🫀</span>
+    <span class="brand-text">
+      <strong>Sofrimento Fetal Academy</strong>
+      <small>guia interativo · obstetrícia</small>
+    </span>
+  </a>
+
+  <div class="topbar-right">
+    <div class="stat-pill xp" id="xpPill" title="Pontos de experiência">
+      <span class="stat-ico">⚡</span>
+      <span class="stat-val" id="xpValue">0</span>
+      <span class="stat-lbl">XP</span>
+    </div>
+    <div class="stat-pill streak" id="streakPill" title="Sequência de acertos">
+      <span class="stat-ico">🔥</span>
+      <span class="stat-val" id="streakValue">0</span>
+    </div>
+    <button class="icon-btn" id="soundBtn" aria-label="Som ambiente" title="Som ambiente">
+      <span id="soundIcon">🔇</span>
+    </button>
+  </div>
+
+  <!-- barra de nível -->
+  <div class="levelbar" id="levelBar" title="Progresso de nível">
+    <div class="levelbar-fill" id="levelFill"></div>
+  </div>
+</header>
+
+<!-- ============ LAYOUT ============ -->
+<div class="layout">
+
+  <!-- ---------- SIDEBAR ---------- -->
+  <aside class="sidebar" id="sidebar">
+    <div class="side-card profile">
+      <div class="avatar" id="avatarEmoji">🩺</div>
+      <div class="profile-info">
+        <strong id="levelName">Interno(a) de Medicina</strong>
+        <span id="levelSub">0 / 120 XP para subir</span>
+      </div>
+      <div class="profile-bar"><div id="profileFill"></div></div>
+    </div>
+
+    <div class="side-card progress-overview">
+      <div class="po-row">
+        <span>Módulos lidos</span>
+        <strong id="poModules">0/8</strong>
+      </div>
+      <div class="po-row">
+        <span>Questões acertadas</span>
+        <strong id="poQuestions">0/0</strong>
+      </div>
+      <div class="po-row">
+        <span>Casos resolvidos</span>
+        <strong id="poCases">0/5</strong>
+      </div>
+      <div class="po-row">
+        <span>Selos conquistados</span>
+        <strong id="poBadges">0</strong>
+      </div>
+    </div>
+
+    <nav class="nav" id="nav" aria-label="Módulos"></nav>
+
+    <button class="side-card badges-btn" id="badgesBtn">
+      <span>🏆 Meus selos</span>
+      <span class="badges-count" id="badgesCount">0/10</span>
+    </button>
+
+    <button class="side-card reset-btn" id="resetBtn">↺ Recomeçar do zero</button>
+  </aside>
+
+  <div class="scrim" id="scrim"></div>
+
+  <!-- ---------- CONTEÚDO ---------- -->
+  <main class="content" id="content" tabindex="-1"></main>
+</div>
+
+<!-- ============ PAINEL DE SOM ============ -->
+<div class="sound-panel" id="soundPanel" role="dialog" aria-label="Som ambiente">
+  <div class="sp-head">
+    <strong>🎧 Som ambiente</strong>
+    <button class="icon-btn small" id="spClose" aria-label="Fechar">✕</button>
+  </div>
+  <p class="sp-hint">Sons gerados ao vivo no navegador — perfeitos para foco nos estudos.</p>
+  <div class="sp-grid" id="spGrid"></div>
+  <label class="sp-volume">
+    <span>Volume</span>
+    <input type="range" id="spVolume" min="0" max="100" value="35">
+    <span id="spVolLabel">35%</span>
+  </label>
+  <label class="sp-toggle">
+    <input type="checkbox" id="spFx" checked>
+    <span>Efeitos sonoros de acerto/erro</span>
+  </label>
+</div>
+
+<!-- ============ TOASTS / XP ============ -->
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<div class="xp-float-layer" id="xpFloatLayer" aria-hidden="true"></div>
+
+<!-- ============ SCRIPTS ============ -->
+<script src="assets/js/content.js"></script>
+<script src="assets/js/illustrations.js"></script>
+<script src="assets/js/audio.js"></script>
+<script src="assets/js/ctg.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
