@@ -111,23 +111,58 @@
   <main class="content" id="content" tabindex="-1"></main>
 </div>
 
-<!-- ============ PAINEL DE SOM ============ -->
-<div class="sound-panel" id="soundPanel" role="dialog" aria-label="Som ambiente">
+<!-- ============ PAINEL DE SOM / MÚSICA ============ -->
+<div class="sound-panel" id="soundPanel" role="dialog" aria-label="Música e som">
   <div class="sp-head">
-    <strong>🎧 Som ambiente</strong>
+    <strong>🎧 Música &amp; som</strong>
     <button class="icon-btn small" id="spClose" aria-label="Fechar">✕</button>
   </div>
-  <p class="sp-hint">Sons gerados ao vivo no navegador — perfeitos para foco nos estudos.</p>
-  <div class="sp-grid" id="spGrid"></div>
-  <label class="sp-volume">
-    <span>Volume</span>
-    <input type="range" id="spVolume" min="0" max="100" value="35">
-    <span id="spVolLabel">35%</span>
-  </label>
-  <label class="sp-toggle">
-    <input type="checkbox" id="spFx" checked>
-    <span>Efeitos sonoros de acerto/erro</span>
-  </label>
+
+  <div class="sp-tabs" role="tablist">
+    <button class="sp-tab on" data-sptab="musica" role="tab" aria-selected="true">🎵 Música</button>
+    <button class="sp-tab" data-sptab="ambiente" role="tab" aria-selected="false">🌧️ Som ambiente</button>
+  </div>
+
+  <!-- ---------- ABA MÚSICA (YouTube oficial) ---------- -->
+  <div class="sp-pane" data-sppane="musica">
+    <div class="yt-stage" id="ytStage">
+      <div class="yt-placeholder" id="ytPlaceholder">
+        <span class="yt-ph-ico">🎵</span>
+        <span>Escolha uma faixa abaixo para começar</span>
+      </div>
+    </div>
+
+    <div class="yt-now" id="ytNow" hidden>
+      <span class="yt-now-eq" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="yt-now-txt" id="ytNowTxt">—</span>
+      <button class="icon-btn small" id="ytStop" title="Parar música" aria-label="Parar música">✕</button>
+    </div>
+
+    <p class="sp-hint">Player oficial do YouTube — as faixas são reproduzidas do canal da própria artista.</p>
+    <div class="yt-tracks" id="ytTracks"></div>
+
+    <div class="yt-custom">
+      <input type="text" id="ytInput" placeholder="Cole um link do YouTube…"
+             aria-label="Link do YouTube" autocomplete="off" spellcheck="false">
+      <button class="btn sm" id="ytLoad">Tocar</button>
+    </div>
+    <p class="sp-note" id="ytNote"></p>
+  </div>
+
+  <!-- ---------- ABA SOM AMBIENTE ---------- -->
+  <div class="sp-pane" data-sppane="ambiente" hidden>
+    <p class="sp-hint">Sons gerados ao vivo no navegador — funcionam offline, sem internet.</p>
+    <div class="sp-grid" id="spGrid"></div>
+    <label class="sp-volume">
+      <span>Volume</span>
+      <input type="range" id="spVolume" min="0" max="100" value="35">
+      <span id="spVolLabel">35%</span>
+    </label>
+    <label class="sp-toggle">
+      <input type="checkbox" id="spFx" checked>
+      <span>Efeitos sonoros de acerto/erro</span>
+    </label>
+  </div>
 </div>
 
 <!-- ============ TOASTS / XP ============ -->

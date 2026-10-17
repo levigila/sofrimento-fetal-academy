@@ -416,8 +416,8 @@ const CTG = (() => {
     if (S.playing && S.trace) {
       S.t += dt * S.speed;
       if (S.t >= S.trace.totalSec) {
-        // reinicia mantendo continuidade visual
-        S.t = 40;
+        // reinicia mantendo continuidade visual (janela cheia, nunca em branco)
+        S.t = Math.min(S.window, S.trace.totalSec - 1);
       }
     }
     monitorTick();
@@ -436,7 +436,9 @@ const CTG = (() => {
     const seed = opts.seed != null ? opts.seed : (Date.now() % 100000);
     S.trace = buildTrace(key, 900, seed);
     S.key = key;
-    S.t = opts.reset === false ? S.t : 60;
+    // fora do desafio a legenda de categoria volta a aparecer
+    S.challenge = opts.challenge ? key : null;
+    S.t = opts.reset === false ? S.t : Math.min(S.window, S.trace.totalSec - 1);
     draw();
     if (S.onEvent) S.onEvent('load', { key, preset: PRESETS[key] });
   }
@@ -457,6 +459,8 @@ const CTG = (() => {
   function setPlaying(v) { S.playing = v; }
   function setSpeed(v) { S.speed = v; }
   function setSound(v) { S.soundOn = v; }
+  // esconde (ou devolve) a legenda de categoria no canvas durante o desafio
+  function setChallenge(key) { S.challenge = key || null; draw(); }
 
   function randomChallenge() {
     const keys = Object.keys(PRESETS);
@@ -465,12 +469,13 @@ const CTG = (() => {
     S.challenge = key;
     S.trace = buildTrace(key, 900, seed);
     S.key = key;
-    S.t = 40;
+    // começa com a janela de 10 min já preenchida: dá para ler o traçado na hora
+    S.t = Math.min(S.window, S.trace.totalSec - 1);
     S.playing = true;
     return key;
   }
 
   function revealCurrent() { return PRESETS[S.key]; }
 
-  return { init, load, setPlaying, setSpeed, setSound, randomChallenge, revealCurrent, PRESETS, S, resize };
+  return { init, load, setPlaying, setSpeed, setSound, setChallenge, randomChallenge, revealCurrent, PRESETS, S, resize };
 })();

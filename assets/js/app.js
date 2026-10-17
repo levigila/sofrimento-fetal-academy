@@ -34,6 +34,31 @@
     { id: 'rosa',      icon: '🌸', name: 'Ruído rosa' }
   ];
 
+  /* ------------------------------------------------------------
+     MÚSICA — faixas do canal OFICIAL da Taylor Swift no YouTube.
+     Todos os IDs abaixo foram validados via oEmbed (200 = existe
+     e permite incorporação). Nenhum arquivo de áudio é hospedado
+     aqui: o player oficial do YouTube faz a reprodução.
+     ------------------------------------------------------------ */
+  const YT_TRACKS = [
+    { id: 'zLSUp53y-HQ', t: 'cardigan',              a: 'folklore',            dur: '4:00' },
+    { id: 'KsZ6tROaVOQ', t: 'the 1',                 a: 'folklore',            dur: '3:31' },
+    { id: 'OWbDJFtHl3w', t: 'my tears ricochet',     a: 'folklore',            dur: '4:16' },
+    { id: 'MLV2SJKWk4M', t: 'illicit affairs',       a: 'folklore',            dur: '3:11' },
+    { id: 'pEY-GPsru_E', t: 'seven',                 a: 'folklore',            dur: '3:29' },
+    { id: '9bdLTPNrlEg', t: 'this is me trying',     a: 'folklore',            dur: '3:16' },
+    { id: 'tOHcAc3r2kw', t: 'the lakes',             a: 'folklore',            dur: '3:32' },
+    { id: 'ukxEKY_7MOc', t: 'tolerate it',           a: 'evermore',            dur: '4:06' },
+    { id: 'u9raS7-NisU', t: 'Daylight',              a: 'Lover',               dur: '4:53' },
+    { id: 'VikHHWrgb4Y', t: 'Cornelia Street',       a: 'Lover',               dur: '4:47' },
+    { id: '8HxbqAsppwU', t: 'Afterglow',             a: 'Lover',               dur: '3:43' },
+    { id: 'cvUAzpn48xA', t: 'Lover',                 a: 'Lover',               dur: '3:41' },
+    { id: 'mkR_Qwix4Ho', t: 'Lavender Haze',         a: 'Midnights',           dur: '3:22' },
+    { id: 'Odh9ddPUkEY', t: 'Midnight Rain',         a: 'Midnights',           dur: '2:55' },
+    { id: 'vv3um0BlygY', t: 'Enchanted',             a: 'Speak Now',           dur: '5:53' },
+    { id: 'CUr_UwUUXzU', t: 'Wildest Dreams (TV)',   a: '1989 (Taylor\u2019s Version)', dur: '3:40' }
+  ];
+
   const MODULE_NAMES = {
     conceito: 'O Conceito Fundamental',
     fisiopato: 'Fisiopatologia',
@@ -110,7 +135,7 @@
       ctgCorrect: 0,
       ctgTotal: 0,
       lastModule: null,
-      sound: { type: 'chuva', volume: 0.35, fx: true, wanted: true }
+      sound: { type: 'chuva', volume: 0.35, fx: true, wanted: false, tab: 'musica', lastTrack: null }
     };
   }
 
@@ -421,10 +446,8 @@
       if (soundArmed) return;
       soundArmed = true;
       Sound.unlock();
-      if (state.sound.wanted) {
-        Sound.playAmbient(state.sound.type);
-        toast('', '🎧', 'Som ambiente ligado', 'Escolha outro som no botão de alto-falante.', 3800);
-      }
+      // Não inicia nada sozinho: a música exige escolha da usuária e o som
+      // ambiente é opcional (aba própria). Só liberamos o contexto de áudio.
       syncSoundUI();
     };
     window.addEventListener('pointerdown', arm, { once: true });
@@ -433,13 +456,16 @@
 
   function syncSoundUI() {
     const icon = document.getElementById('soundIcon');
-    const playing = Sound.isPlaying;
-    if (icon) icon.textContent = playing ? '🔊' : '🔇';
+    // o ícone reflete qualquer áudio ativo: música do YouTube ou som ambiente
+    const ambient = Sound.isPlaying;
+    const music = !!ytCurrent;
+    const active = ambient || music;
+    if (icon) icon.textContent = active ? '🔊' : '🔇';
     const btn = document.getElementById('soundBtn');
-    if (btn) btn.classList.toggle('on', playing);
+    if (btn) btn.classList.toggle('on', active);
 
     $$('#spGrid .sp-item').forEach(el => {
-      el.classList.toggle('on', el.dataset.sound === state.sound.type);
+      el.classList.toggle('on', ambient && el.dataset.sound === state.sound.type);
     });
   }
 
@@ -477,6 +503,14 @@
         if (fx.checked) Sound.fx.click();
       });
     }
+
+    /* abas música / som ambiente */
+    $$('#soundPanel .sp-tab').forEach(t => {
+      t.addEventListener('click', () => { setSoundTab(t.dataset.sptab); Sound.fx.click(); });
+    });
+    setSoundTab(state.sound.tab === 'ambiente' ? 'ambiente' : 'musica');
+
+    buildMusicPanel();
   }
 
   function toggleSoundPanel(force) {
@@ -486,6 +520,171 @@
     panel.classList.toggle('open', open);
     const btn = document.getElementById('soundBtn');
     if (btn) btn.classList.toggle('on', open);
+  }
+
+  /* ==========================================================
+     5b. PLAYER DE MÚSICA (YouTube oficial)
+     ========================================================== */
+  let ytCurrent = null;   // { id, t, a } ou { list }
+
+  function ytEmbedSrc(track) {
+    const base = 'https://www.youtube-nocookie.com/embed/';
+    const common = '&rel=0&modestbranding=1&playsinline=1&autoplay=1';
+    if (track.list) return base + 'videoseries?list=' + encodeURIComponent(track.list) + common;
+    return base + encodeURIComponent(track.id) + '?' + common.slice(1);
+  }
+
+  /* aceita watch?v=, youtu.be/, /embed/, /shorts/ ou playlist list= */
+  function parseYouTube(input) {
+    const s = String(input || '').trim();
+    if (!s) return null;
+
+    // playlist pura (videoseries) ou link com &list=
+    const listMatch = s.match(/[?&]list=([A-Za-z0-9_-]+)/);
+    const idMatch = s.match(/(?:v=|\/embed\/|\/shorts\/|youtu\.be\/|\/live\/)([A-Za-z0-9_-]{11})/);
+    const bareId = /^[A-Za-z0-9_-]{11}$/.test(s) ? s : null;
+
+    if (idMatch) return { id: idMatch[1], list: listMatch ? listMatch[1] : null };
+    if (bareId) return { id: bareId, list: null };
+    if (listMatch) return { list: listMatch[1] };
+    if (/^PL[A-Za-z0-9_-]{10,}$/.test(s) || /^OLAK5uy_[A-Za-z0-9_-]+$/.test(s)) return { list: s };
+    return null;
+  }
+
+  function ytLabel(track) {
+    if (track.list) return 'Playlist do YouTube';
+    return (track.t || 'Faixa') + (track.a ? ' · ' + track.a : '');
+  }
+
+  function playTrack(track, btnEl) {
+    const stage = document.getElementById('ytStage');
+    const ph = document.getElementById('ytPlaceholder');
+    const now = document.getElementById('ytNow');
+    const nowTxt = document.getElementById('ytNowTxt');
+    const note = document.getElementById('ytNote');
+    if (!stage) return;
+
+    if (!navigator.onLine) {
+      setNote('Você está offline. A música do YouTube precisa de internet — use a aba "Som ambiente", que funciona sem conexão.', true);
+      return;
+    }
+
+    ytCurrent = track;
+    // música e som ambiente não devem tocar juntos
+    if (Sound.isPlaying) Sound.stopAmbient();
+    stage.classList.add('loading');
+    stage.innerHTML = '';
+    const frame = document.createElement('iframe');
+    frame.src = ytEmbedSrc(track);
+    frame.title = 'Player de música — ' + ytLabel(track);
+    frame.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+    frame.referrerPolicy = 'strict-origin-when-cross-origin';
+    frame.allowFullscreen = true;
+    frame.addEventListener('load', () => stage.classList.remove('loading'));
+    stage.appendChild(frame);
+
+    // se o YouTube não responder em 12 s, avisa (rede bloqueada, etc.)
+    clearTimeout(playTrack._t);
+    playTrack._t = setTimeout(() => {
+      if (stage.classList.contains('loading')) {
+        stage.classList.remove('loading');
+        setNote('O YouTube demorou para responder. Se a rede bloquear o player, ' +
+          '<a href="https://www.youtube.com/watch?v=' + (track.id || '') + '" target="_blank" rel="noopener">abra a faixa direto no YouTube</a>.', true);
+      }
+    }, 12000);
+
+    if (now && nowTxt) { now.hidden = false; nowTxt.textContent = ytLabel(track); }
+    if (note) { note.textContent = ''; note.classList.remove('err'); }
+    if (ph) ph.remove();
+
+    // destaca a faixa ativa
+    $$('#ytTracks .yt-track').forEach(b => b.classList.toggle('on', b === btnEl));
+
+    state.sound.lastTrack = track.id || track.list || null;
+    saveState();
+    syncSoundUI();
+    Sound.fx.click();
+  }
+
+  function stopTrack() {
+    const stage = document.getElementById('ytStage');
+    const now = document.getElementById('ytNow');
+    if (!stage) return;
+    clearTimeout(playTrack._t);
+    stage.classList.remove('loading');
+    stage.innerHTML =
+      '<div class="yt-placeholder" id="ytPlaceholder">' +
+        '<span class="yt-ph-ico">🎵</span>' +
+        '<span>Escolha uma faixa abaixo para começar</span>' +
+      '</div>';
+    if (now) now.hidden = true;
+    ytCurrent = null;
+    state.sound.lastTrack = null;
+    saveState();
+    $$('#ytTracks .yt-track').forEach(b => b.classList.remove('on'));
+    syncSoundUI();
+    Sound.fx.click();
+  }
+
+  function setNote(msg, isErr) {
+    const note = document.getElementById('ytNote');
+    if (!note) return;
+    note.innerHTML = msg || '';
+    note.classList.toggle('err', !!isErr);
+  }
+
+  function buildMusicPanel() {
+    const wrap = document.getElementById('ytTracks');
+    if (wrap) {
+      wrap.innerHTML = YT_TRACKS.map((t, i) =>
+        '<button class="yt-track" data-yt="' + i + '" title="Tocar ' + esc(t.t) + '">' +
+          '<span class="yt-track-ico">▶</span>' +
+          '<span><span class="yt-track-t">' + esc(t.t) + '</span>' +
+          '<span class="yt-track-a">' + esc(t.a) + '</span></span>' +
+          '<span class="yt-track-dur">' + esc(t.dur) + '</span>' +
+        '</button>'
+      ).join('');
+
+      wrap.addEventListener('click', e => {
+        const btn = e.target.closest('[data-yt]');
+        if (!btn) return;
+        playTrack(YT_TRACKS[parseInt(btn.dataset.yt, 10)], btn);
+      });
+    }
+
+    const stop = document.getElementById('ytStop');
+    if (stop) stop.addEventListener('click', stopTrack);
+
+    const input = document.getElementById('ytInput');
+    const load = document.getElementById('ytLoad');
+    const submit = () => {
+      const parsed = parseYouTube(input ? input.value : '');
+      if (!parsed) {
+        setNote('Link não reconhecido. Cole algo como <code>https://youtu.be/VIDEOID</code> ou o endereço de uma playlist.', true);
+        Sound.fx.error();
+        return;
+      }
+      playTrack(Object.assign({ t: 'Link personalizado' }, parsed), null);
+      if (input) input.value = '';
+    };
+    if (load) load.addEventListener('click', submit);
+    if (input) input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+
+    // reage a mudanças de conexão
+    window.addEventListener('offline', () =>
+      setNote('Sem conexão: a música do YouTube pausou. A aba "Som ambiente" continua funcionando offline.', true));
+  }
+
+  function setSoundTab(tab) {
+    $$('#soundPanel .sp-tab').forEach(t => {
+      const on = t.dataset.sptab === tab;
+      t.classList.toggle('on', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    $$('#soundPanel .sp-pane').forEach(p => { p.hidden = p.dataset.sppane !== tab; });
+    state.sound.tab = tab;
+    saveState();
+    if (tab === 'musica') setNote('');
   }
 
   /* ==========================================================
@@ -1593,8 +1792,10 @@
     CTG.init(canvas, wrap, (evt, data) => {
       if (evt === 'load' && data && data.preset) {
         lab.preset = data.key;
-        if (!labChallenge) updateReadout(data.preset, data.key);
-        highlightPreset(data.key);
+        if (!labChallenge) {
+          updateReadout(data.preset, data.key);
+          highlightPreset(data.key);
+        }
       }
     });
 
@@ -1633,6 +1834,17 @@
     });
   }
 
+  // Durante o desafio a fileira de presets fica escondida — ela entregaria a resposta.
+  function syncChallengeMode(host) {
+    const box = host || (lab && lab.host);
+    if (!box) return;
+    const on = !!labChallenge;
+    box.classList.toggle('is-challenge', on);
+    if (on) {
+      box.querySelectorAll('[data-preset]').forEach(b => b.classList.remove('on'));
+    }
+  }
+
   function wireLabControls(host) {
     host.querySelector('#ctgPlay').addEventListener('click', () => {
       lab.playing = !lab.playing;
@@ -1659,6 +1871,8 @@
 
     host.querySelector('#ctgRandom').addEventListener('click', () => {
       Sound.fx.click();
+      // no meio do desafio, "traçado aleatório" sorteia outro desafio (sem revelar nada)
+      if (labChallenge) { startChallenge(host); return; }
       labChallenge = null;
       const keys = Object.keys(CTG.PRESETS);
       const key = keys[Math.floor(Math.random() * keys.length)];
@@ -1708,6 +1922,7 @@
   function buildChallenge(host) {
     const box = host.querySelector('#ctgChallenge');
     if (!box) return;
+    syncChallengeMode(host);
 
     if (labChallenge && labChallenge.answered) {
       const preset = CTG.PRESETS[labChallenge.key];
@@ -1720,10 +1935,12 @@
           (labChallenge.right ? '✅ <b>Acertou!</b> ' : '❌ <b>Era ' + esc(preset.label) + '.</b> ') +
           esc(preset.verdict) +
         '</div>' +
-        '<div style="margin-top:13px">' +
+        '<div class="ctg-ch-actions">' +
           '<button class="btn primary" id="ctgNextCh">🎲 Próximo desafio (+25 XP)</button>' +
+          '<button class="btn sm ghost" id="ctgExitCh">Sair do desafio</button>' +
         '</div>';
       box.querySelector('#ctgNextCh').addEventListener('click', () => { startChallenge(host); });
+      box.querySelector('#ctgExitCh').addEventListener('click', () => { exitChallenge(host); });
       return;
     }
 
@@ -1739,10 +1956,14 @@
         '</div>' +
         '<div class="ctg-answers">' +
           options.map(k => '<button class="ctg-answer" data-answer="' + k + '">' + esc(CTG.PRESETS[k].label) + '</button>').join('') +
+        '</div>' +
+        '<div class="ctg-ch-actions">' +
+          '<button class="btn sm ghost" id="ctgExitCh">Sair do desafio</button>' +
         '</div>';
       box.querySelectorAll('[data-answer]').forEach(b => {
         b.addEventListener('click', () => answerChallenge(b.dataset.answer, host));
       });
+      box.querySelector('#ctgExitCh').addEventListener('click', () => { exitChallenge(host); });
       return;
     }
 
@@ -1762,7 +1983,6 @@
     lab.playing = true;
     setPlayButton(true);
     labChallenge = { key, answered: false, right: false };
-    highlightPreset(key);
 
     const out = host.querySelector('#ctgReadout');
     if (out) {
@@ -1771,6 +1991,16 @@
         'contrações → linha de base → variabilidade → acelerações → desacelerações.</div>';
     }
     buildChallenge(host);
+  }
+
+  // Volta para a exploração livre: presets reaparecem e o veredito do traçado atual é mostrado.
+  function exitChallenge(host) {
+    Sound.fx.click();
+    labChallenge = null;
+    CTG.setChallenge(null);
+    buildChallenge(host);
+    highlightPreset(lab.preset);
+    updateReadout(CTG.PRESETS[lab.preset], lab.preset);
   }
 
   function answerChallenge(key, host) {
@@ -1816,11 +2046,17 @@
 
     requestAnimationFrame(() => {
       CTG.resize();
-      highlightPreset(l.preset);
       l.playing = true;
       setPlayButton(true);
       CTG.setPlaying(true);
       CTG.setSound(l.sound);
+      if (labChallenge) {
+        // voltou para a tela no meio de um desafio: nada de entregar o diagnóstico
+        syncChallengeMode(l.host);
+        buildChallenge(l.host);
+      } else {
+        highlightPreset(l.preset);
+      }
     });
 
     cleanupView = () => {
@@ -1910,6 +2146,8 @@
     if (spGrid) spGrid.addEventListener('click', e => {
       const item = e.target.closest('[data-sound]');
       if (!item) return;
+      // evita misturar as duas fontes de áudio
+      if (ytCurrent) stopTrack();
       state.sound.type = item.dataset.sound;
       state.sound.wanted = true;
       Sound.setType(state.sound.type);
